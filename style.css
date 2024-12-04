@@ -1,0 +1,7 @@
+/* Optional styles for the project */
+body {
+    margin: 0;
+    overflow: hidden; /* Prevent scrollbars */
+    background: radial-gradient(circle, #000428, #004e92); /* Dark gradient background */
+    height: 100vh; /* Ensure the canvas covers the full viewport */
+}
