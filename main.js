@@ -76,6 +76,8 @@ class CameraController{
 }
 
 class Transform{
+    
+
     constructor(){
         this.pos = new THREE.Vector3(0,0,0);
         this.vel = new THREE.Vector3(0,0,0);
@@ -109,22 +111,24 @@ class Astronaut{
 }
 
 class Planet{
+    static randomizeTexture() {
+        const textures = ['textures/water.jpg', 'textures/adam.jpg']
+        const randomIndex = Math.floor(Math.random() * textures.length)
+        return textures[randomIndex];
+    }
+
     constructor(position, size){
         this.transform = new Transform();
         this.transform.pos.copy(position);
 
+        const textureLoader = new THREE.TextureLoader();
+        const texture = textureLoader.load(Planet.randomizeTexture());
         this.geometry = new THREE.SphereGeometry(size, 32, 16);
         this.material = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            metalness: 0.3,
-            roughness: 0.7,
-        });
+            map: texture,
+          });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.mesh.position.copy(position);
-
-        const wireframe = new THREE.WireframeGeometry(this.geometry);
-        this.wireframe = new THREE.LineSegments(wireframe, new THREE.LineBasicMaterial({color: 0x000000}));
-        this.mesh.add(this.wireframe);
     }
 
     syncTransformToMesh() {
