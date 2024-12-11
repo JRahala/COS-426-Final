@@ -162,13 +162,13 @@ class Game{
 			// NOT CALCULATING GRAVITY YET, JUST HARDCODED FORCES
 			if (this.planets != []){
 				for (const planet of this.planets){
-					planet.transform3.integrate();
+					planet.transform3.integrate(dt);
 					planet.transform3.resetForce();
 				}
 			}
 
 			if (this.astronaut){
-				this.astronaut.transform3.integrate();
+				this.astronaut.transform3.integrate(dt);
 				this.astronaut.transform3.resetForce();
 			}
 
@@ -278,4 +278,4 @@ A.startControlLoop();
 // console.log(P1.checkSphereIntersection(A.interactionSphere));
 
 // Temporarily game loop
-G.startPhysicsLoop();
+//G.startPhysicsLoop();
