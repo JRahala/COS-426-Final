@@ -219,7 +219,7 @@ class Game{
 
 					// TODO: this should be generalized to all meshes later - CHECK FOR ASTRONAUT COLLISION
 					const intersectionFaces = planet.checkSphereFaceIntersection(this.astronaut.interactionSphere);
-					const buyouncy = 100;
+					const buyouncy = 200;
 					for (let i = 0; i < intersectionFaces.length; i++) {
 						const [v0, v1, v2] = intersectionFaces[i];
 						const edge1 = new THREE.Vector3().subVectors(v1, v0);
@@ -273,12 +273,21 @@ class Astronaut extends Renderable{
     this.currentPlanet = null;
 
     this.up = new THREE.Vector3(0,1,0);
-    this.forward = new THREE.Vector3(0,0,1);
+    this.forward = new THREE.Vector3(0,0,-1);
 
     // interaction sphere for debug purposes
     const interactionSphereGeometry = new THREE.SphereGeometry(Astronaut.interactionSphereRadius);
     const interactionSphereMaterial = new THREE.MeshBasicMaterial( { color: 0x0000ff, transparent: true, opacity: 0.5 } );
     this.interactionSphere = new Renderable(game.scene, transform3, interactionSphereGeometry, interactionSphereMaterial);
+
+    // Forward direction indicator
+    const indicatorGeometry = new THREE.ConeGeometry(1, 2, 12);
+    const indicatorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    this.forwardIndicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+    this.forwardIndicator.position.set(0, 0, Astronaut.radius + 0.6); // Position it slightly ahead of the sphere
+    this.forwardIndicator.rotation.x = Math.PI / 2; // Align cone with the forward vector
+    this.mesh.add(this.forwardIndicator); // Attach to the astronaut's mesh
+	
   }
 
   controlHandler(){
@@ -291,8 +300,8 @@ class Astronaut extends Renderable{
     const moveAngle = 3 * Math.PI / 180;
     const turnAngle = 5 * Math.PI / 180;
 
-    if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, -moveAngle));
-    if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, moveAngle));
+    if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, moveAngle));
+    if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, -moveAngle));
 
     if (this.game.keysPressed["a"]) this.forward.copy(forward.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, turnAngle))); 
     if (this.game.keysPressed["d"]) this.forward.copy(forward.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, -turnAngle)));
@@ -300,12 +309,12 @@ class Astronaut extends Renderable{
     if (this.game.keysPressed["ArrowUp"]) console.log("up");
     if (this.game.keysPressed["ArrowDown"]) console.log("down");
 
+		this.setOrientation();
   }
 
   adjustPosition(quaternion) {
     if (this.onPlanet) {
       quaternion.normalize();
-      this.transform3.orientation.multiply(quaternion);
       const offset = this.transform3.pos.clone().sub(this.currentPlanet.transform3.pos).applyQuaternion(quaternion);
       this.transform3.pos = new THREE.Vector3().addVectors(this.currentPlanet.transform3.pos, offset)
 
@@ -313,6 +322,14 @@ class Astronaut extends Renderable{
       this.forward.applyQuaternion(quaternion);
     } 
   }
+
+	setOrientation() {
+		const lookAtQuaternion = new THREE.Quaternion();
+		const lookAtMatrix = new THREE.Matrix4();
+		lookAtMatrix.lookAt(new THREE.Vector3(0, 0, 0), this.forward, this.up);
+		lookAtQuaternion.setFromRotationMatrix(lookAtMatrix);
+		this.transform3.orientation = lookAtQuaternion;
+	}
 
   startControlLoop(){
     const clock = new THREE.Clock();
