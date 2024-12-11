@@ -1,16 +1,11 @@
-// SOMETHING IS ****NOT**** GOING WRONG IN THE INTEGRATE FUNCTION 
-
 class Transform3{
-	static globalDamping = 0.99;
-	static G = 100;
+	static globalDamping = 0.90;
+	static G = 1;
 
 	constructor(pos, vel, mass){
 		this.pos = pos;
 		this.vel = vel;
-
-		const quaternion = new THREE.Quaternion();
-		quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
-		this.orientation = quaternion;
+        this.orientation = new THREE.Quaternion();
 
 		this.netForce = new THREE.Vector3(0.0,0.0,0.0);
 		this.mass = mass;
@@ -30,7 +25,7 @@ class Transform3{
 		const acc = this.netForce.clone().multiplyScalar(this.invMass);
 		this.vel.addScaledVector(acc, dt);
 		this.pos.addScaledVector(this.vel, dt);
-		//this.vec.multiplyScalar(this.globalDamping); - apply this when I figure out how to incorporate dt inexpensively
+		this.vel.multiplyScalar(Transform3.globalDamping); //- apply this when I figure out how to incorporate dt inexpensively
 	}
 
 	calculateGravity(other){
@@ -42,7 +37,35 @@ class Transform3{
 		console.log(force);
 		return force;
 	}
+
+    getOrientationVectors(){
+        const forward = new THREE.Vector3(0,0,1);
+        const up = new THREE.Vector3(0,1,0);
+        const right = new THREE.Vector3(1,0,0);
+
+        forward.applyQuaternion(this.orientation);
+        up.applyQuaternion(this.orientation);
+        right.applyQuaternion(this.orientation);
+
+        return {forward, up, right};
+    }
 	
+    changeUpDirection(newUp){
+        newUp.normalize();
+        const rotationAxis = new THREE.Vector3().crossVectors(this.getOrientationVectors().up, newUp);
+        if (rotationAxis.lengthSq() === 0) return;
+        rotationAxis.normalize();
+        
+        const angle = Math.acos(this.getOrientationVectors().up.dot(newUp));
+        const rotationQuaternion = new THREE.Quaternion();
+        rotationQuaternion.setFromAxisAngle(rotationAxis, angle);
+        this.orientation.multiply(rotationQuaternion);
+    }
+
+    applyLocalForce(localForce){
+        const globalForce = localForce.clone().applyQuaternion(this.orientation);
+        this.applyForce(globalForce);
+    }
 }
 
 
@@ -136,9 +159,6 @@ class Game{
 		
 		// Keyboard strokes
 		this.keysPressed = {};
-
-		// NO MOUSE INPUT YET - because I want to work out if I want this time based or not, think
-		// about the effects of dragging without time based approach - possible animationLop type approach
 	
 		// TODO: REMOVE HARD CODED LIGHT
 		const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -157,23 +177,6 @@ class Game{
 		window.addEventListener("keyup", (event) => {
 			this.keysPressed[event.key.toLowerCase()] = false;
 		});
-
-		/*
-		this.renderer.domElement.addEventListener("mousedown", (event) => {
-			this.prevMousePosition = this.currMousePosition;
-			this.currMousePosition = {x: event.clientX, y: event.clientY};
-		});
-
-		this.renderer.domElement.addEventListener("mouseup", (event) => {
-			this.prevMousePosition = this.currMousePosition;
-			this.currMousePosition = {x: event.clientX, y: event.clientY};
-		})
-
-		this.renderer.domElement.addEventListener("mousemove", (event) => {
-			this.prevMousePosition = this.currMousePosition;
-			this.currMousePosition = {x: event.clientX, y: event.clientY};
-		})
-		*/
 	}
 
 	addPlanet(planet){
@@ -212,42 +215,48 @@ class Game{
 				this.astronaut.transform3.applyForce(this.astronaut.transform3.calculateGravity(planet.transform3));
 			}
 
-			if (this.planets != []){
-				for (const planet of this.planets){
+			if (this.planets.length > 0) { // Ensure there are planets in the array
+				for (const planet of this.planets) {
 					planet.transform3.integrate(dt);
 					planet.transform3.resetForce();
-
-					// TODO: this should be generalized to all meshes later - CHECK FOR ASTRONAUT COLLISION
+			
+					// Check for intersections between astronaut and planet surface
 					const intersectionFaces = planet.checkSphereFaceIntersection(this.astronaut.interactionSphere);
-					const buyouncy = 200;
-					const desiredDistance = 1.0; // Desired distance from the surface
-					
+					const buoyancyConstant = 200;   // Controls the spring-like effect strength
+					const desiredDistance = 10.0; // Desired distance from the surface
+					const dampingFactor = 0.5;      // Controls proximity-based damping strength
+			
 					for (let i = 0; i < intersectionFaces.length; i++) {
 						const [v0, v1, v2] = intersectionFaces[i];
+			
+						// Calculate the normal of the face
 						const edge1 = new THREE.Vector3().subVectors(v1, v0);
 						const edge2 = new THREE.Vector3().subVectors(v2, v0);
 						const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-						
-						// Calculate the centroid of the face (for the plane equation)
+			
+						// Find the centroid of the face
 						const centroid = new THREE.Vector3().add(v0).add(v1).add(v2).divideScalar(3);
-						
-						// Vector from the astronaut's position to the centroid of the face
+			
+						// Calculate the distance from the astronaut to the face plane
 						const astronautToCentroid = new THREE.Vector3().subVectors(this.astronaut.transform3.pos, centroid);
-						
-						// Project the astronaut's position onto the plane of the triangle
-						const distanceToPlane = astronautToCentroid.dot(normal); // Distance along the normal
-					
-						// Apply spring force proportional to the distance
-						const springForceMagnitude = -buyouncy * (Math.abs(distanceToPlane) - desiredDistance); // Hooke's law
-						
-						// Ensure the force points towards the surface (towards the centroid)
+						const distanceToPlane = astronautToCentroid.dot(normal);
+			
+						// Calculate spring-like force using Hooke's law
+						const springForceMagnitude = -buoyancyConstant * (Math.abs(distanceToPlane) - desiredDistance);
 						const springForce = normal.clone().multiplyScalar(springForceMagnitude);
-					
-						// Apply the calculated spring force to the astronaut
+			
+						// Apply proximity-based damping
+						if (Math.abs(distanceToPlane) < desiredDistance) { // Within the damping region
+							const damping = astronautToCentroid.clone().multiplyScalar(-dampingFactor * dt);
+							springForce.add(damping); // Add damping force to slow the astronaut
+						}
+			
+						// Apply the calculated force to the astronaut
 						this.astronaut.transform3.applyForce(springForce);
 					}
 				}
 			}
+			
 
 			if (this.astronaut){
 				this.astronaut.transform3.integrate(dt);
@@ -259,7 +268,6 @@ class Game{
 		physics();
 	}
 }
-
 
 class Planet extends Renderable{
 	static randomizeTexture() {
@@ -278,122 +286,100 @@ class Planet extends Renderable{
 
 
 class Astronaut extends Renderable{
-  static radius = 1;
-  static interactionSphereRadius = 1.5;
+    static radius = 5;
+    static interactionSphereRadius = 50;
+    
+    constructor(game, pos, mass){
+        const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
+        const geometry = new THREE.SphereGeometry(Astronaut.radius);
+        const material = new THREE.MeshStandardMaterial({color: 0xff0000});
+        super(game.scene, transform3, geometry, material);
 
-  constructor(game, pos, mass){
-    const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
-    const geometry = new THREE.SphereGeometry(Astronaut.radius);
-    const material = new THREE.MeshStandardMaterial({color: 0xff0000});
-    super(game.scene, transform3, geometry, material);
+        this.game = game;
+        this.onPlanet = false;
+        this.currentPlanet = null;
 
-    this.game = game;
-    this.onPlanet = false;
-    this.currentPlanet = null;
+        // interaction sphere for debug purposes
+        const interactionSphereGeometry = new THREE.SphereGeometry(Astronaut.interactionSphereRadius);
+        const interactionSphereMaterial = new THREE.MeshBasicMaterial( { color: 0x0000ff, transparent: true, opacity: 0.5 } );
+        this.interactionSphere = new Renderable(game.scene, transform3, interactionSphereGeometry, interactionSphereMaterial);
 
-    this.up = new THREE.Vector3(0,1,0);
-    this.forward = new THREE.Vector3(0,0,-1);
+		const normalSph = new THREE.SphereGeometry(3);
+		const normalSpMat = new THREE.MeshBasicMaterial( { color: 0xffff00, transparent: false} );
+		this.normalTrans = new Transform3(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), 0);
+		this.normalSph = new Renderable(game.scene, this.normalTrans, normalSph, normalSpMat);
+		this.normalSph.addToScene(game.scene);
+    }
 
-    // interaction sphere for debug purposes
-    const interactionSphereGeometry = new THREE.SphereGeometry(Astronaut.interactionSphereRadius);
-    const interactionSphereMaterial = new THREE.MeshBasicMaterial( { color: 0x0000ff, transparent: true, opacity: 0.5 } );
-    this.interactionSphere = new Renderable(game.scene, transform3, interactionSphereGeometry, interactionSphereMaterial);
+    controlHandler(dt){
+        const moveSpeed = 10000; // Movement speed in local coordinates
+        const rotateSpeed = dt * 0.5 * Math.PI; // Rotation speed in radians per second
 
-    // Forward direction indicator
-    const indicatorGeometry = new THREE.ConeGeometry(1, 2, 12);
-    const indicatorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    this.forwardIndicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
-    this.forwardIndicator.position.set(0, 0, Astronaut.radius + 0.6); // Position it slightly ahead of the sphere
-    this.forwardIndicator.rotation.x = Math.PI / 2; // Align cone with the forward vector
-    this.mesh.add(this.forwardIndicator); // Attach to the astronaut's mesh
-	
-  }
+        // Move forward (W key) or backward (S key) in the local forward direction
+        if (this.game.keysPressed["w"]) {
+            const forward = this.transform3.getOrientationVectors().forward; // Get the forward direction
+            const movement = forward.clone().multiplyScalar(moveSpeed);
+            this.transform3.applyForce(movement); // Apply the movement force
+        }
+        if (this.game.keysPressed["s"]) {
+            const forward = this.transform3.getOrientationVectors().forward; // Get the forward direction
+            const movement = forward.clone().multiplyScalar(-moveSpeed);
+            this.transform3.applyForce(movement); // Apply the movement force
+        }
 
-  controlHandler(dt){
-    const up = this.up;
-    const forward = this.forward;
-    const side = new THREE.Vector3().crossVectors(forward, up);
+        // Rotate left (A key) or right (D key) around the up direction (Y-axis)
+        if (this.game.keysPressed["a"]) {
+            const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotateSpeed * dt);
+            this.transform3.orientation.multiply(rotation);
+        }
+        if (this.game.keysPressed["d"]) {
+            const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -rotateSpeed * dt);
+            this.transform3.orientation.multiply(rotation);
+        }
 
-    console.log(forward);
+        // Try to adjust the up to be at the normal of the surface if on a planet        
+        if (this.onPlanet){
+            const normalToPlanet = new THREE.Vector3().subVectors(this.currentPlanet.transform3.pos, this.transform3.pos);
+            normalToPlanet.normalize();
+            this.transform3.changeUpDirection(normalToPlanet);
+        }
 
-    const moveAngle = dt * 150 * Math.PI / 180;
-    const turnAngle = dt * 250 * Math.PI / 180;
-
-    if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, moveAngle));
-    if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, -moveAngle));
-
-    if (this.game.keysPressed["a"]) this.forward.copy(forward.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, turnAngle))); 
-    if (this.game.keysPressed["d"]) this.forward.copy(forward.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, -turnAngle)));
-
-    if (this.game.keysPressed["ArrowUp"]) console.log("up");
-    if (this.game.keysPressed["ArrowDown"]) console.log("down");
-
-		this.setOrientation();
-  }
-
-  adjustPosition(quaternion) {
-    if (this.onPlanet) {
-      quaternion.normalize();
-      const offset = this.transform3.pos.clone().sub(this.currentPlanet.transform3.pos).applyQuaternion(quaternion);
-      this.transform3.pos = new THREE.Vector3().addVectors(this.currentPlanet.transform3.pos, offset)
-
-      this.up.applyQuaternion(quaternion);
-      this.forward.applyQuaternion(quaternion);
-    } 
-  }
-
-	setOrientation() {
-		const lookAtQuaternion = new THREE.Quaternion();
-		const lookAtMatrix = new THREE.Matrix4();
-		lookAtMatrix.lookAt(new THREE.Vector3(0, 0, 0), this.forward, this.up);
-		lookAtQuaternion.setFromRotationMatrix(lookAtMatrix);
-		this.transform3.orientation = lookAtQuaternion;
+		this.normalTrans.pos = new THREE.Vector3().addVectors(this.transform3.pos, this.transform3.getOrientationVectors().up);
+		this.normalSph.transform3 = this.normalTrans;
 	}
 
-  startControlLoop(){
-    const clock = new THREE.Clock();
-    const control = () => {
-      const dt = clock.getDelta();
-      this.controlHandler(dt);
-      requestAnimationFrame(control);
-    };
-    control();
-  }
+
+
+    startControlLoop(){
+        const clock = new THREE.Clock();
+        const control = () => {
+            const dt = clock.getDelta();
+            this.controlHandler(dt);
+            requestAnimationFrame(control);
+        };
+        control();
+    }
 }
 
 
 
 /* Questions
 
-Perhaps we have to generate a new mesh any time we wish to change the radius of  planet, which could be annoying
-
-- Steps
-
-- add controls for Astronaut to move in space
-- add hit box detection for when astronaut is close to a planet
-- we should make child transforms as well so that when we rotate a planet, we can rotate all children objects easily?
-
-
-we want a global geometry of the astronaut, then we have a local transform that
-after each jump fixes its upwards direction on the normal of what planet its on
-
-we can just lerp the normals to the intersection normals of the meshes - for now, lets do this and register the collisions with the sphere mesh
-
-INCORPORATE LOCAL ROTATIONS SO THAT THE ASTRONAUT GOES FORWARD IN THE WAY THAT THEY ARE ORIENTED!!!
-ALSO APPLY THIS TO THE MESH
+STOP FOCUSSING ON KEEPING GETTING FORWARD TO BE THE SAME, 
+JUST MAKE SURE THAT THE CAMERA DIRECTION IS STEADY AND LERP SLOWLY NOT IMMEDIATELY
 
 */
 
 console.log("Hello world");
 const G = new Game();
-const A = new Astronaut(G, new THREE.Vector3(-20,31,-100), 10);
+const A = new Astronaut(G, new THREE.Vector3(0,80,-200), 10);
 
-const P1 = new Planet(G, new THREE.Vector3(-20,20,-100), 10, 10);
-const P2 = new Planet(G, new THREE.Vector3(40,10,-150), 10, 10);
+const P1 = new Planet(G, new THREE.Vector3(0,-100,-200), 150, 1e5);
+//const P2 = new Planet(G, new THREE.Vector3(40,10,-150), 10, 10);
 
 // Add renderables to scene
 G.addPlanet(P1);
-G.addPlanet(P2);
+//G.addPlanet(P2);
 G.addAstronaut(A);
 
 A.onPlanet = true;
