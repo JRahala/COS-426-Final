@@ -243,6 +243,11 @@ class Game{
 
 
 class Planet extends Renderable{
+	static randomizeTexture() {
+		const textures = ['COS-426-Final/textures/water.jpg', 'COS-426-Final/textures/adam.jpg']
+		const randomIndex = Math.floor(Math.random() * textures.length);
+		return textures[randomIndex];
+	}
 	constructor(game, pos, radius, mass){
 		const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
 		const geometry = new THREE.SphereGeometry(radius, 32, 16);
@@ -254,56 +259,70 @@ class Planet extends Renderable{
 
 
 class Astronaut extends Renderable{
-	static radius = 1;
-	static interactionSphereRadius = 1.5;
+  static radius = 1;
+  static interactionSphereRadius = 1.5;
 
-	constructor(game, pos, mass){
-		const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
-		const geometry = new THREE.SphereGeometry(Astronaut.radius);
-		const material = new THREE.MeshStandardMaterial({color: 0xff0000});
-		super(game.scene, transform3, geometry, material);
+  constructor(game, pos, mass){
+    const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
+    const geometry = new THREE.SphereGeometry(Astronaut.radius);
+    const material = new THREE.MeshStandardMaterial({color: 0xff0000});
+    super(game.scene, transform3, geometry, material);
 
-		this.game = game;
-		this.onPlanet = false;
-		this.currentPlanet = null;
-		
-		// interaction sphere for debug purposes
-		const interactionSphereGeometry = new THREE.SphereGeometry(Astronaut.interactionSphereRadius);
-		const interactionSphereMaterial = new THREE.MeshBasicMaterial( { color: 0x0000ff, transparent: true, opacity: 0.5 } );
-		this.interactionSphere = new Renderable(game.scene, transform3, interactionSphereGeometry, interactionSphereMaterial);
-	}
+    this.game = game;
+    this.onPlanet = false;
+    this.currentPlanet = null;
 
-	controlHandler(dt){
-		const angle = Math.PI / 180;
-		if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), angle));
-		if (this.game.keysPressed["a"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, -1, 0), angle));
-		if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle));
-		if (this.game.keysPressed["d"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle));
+    this.up = new THREE.Vector3(0,1,0);
+    this.forward = new THREE.Vector3(0,0,1);
 
-		if (this.game.keysPressed["ArrowUp"]) console.log("up");
-		if (this.game.keysPressed["ArrowDown"]) console.log("down");
+    // interaction sphere for debug purposes
+    const interactionSphereGeometry = new THREE.SphereGeometry(Astronaut.interactionSphereRadius);
+    const interactionSphereMaterial = new THREE.MeshBasicMaterial( { color: 0x0000ff, transparent: true, opacity: 0.5 } );
+    this.interactionSphere = new Renderable(game.scene, transform3, interactionSphereGeometry, interactionSphereMaterial);
+  }
 
-	}
+  controlHandler(){
+    const up = this.up;
+    const forward = this.forward;
+    const side = new THREE.Vector3().crossVectors(forward, up);
 
-	adjustPosition(quaternion) {
-		if (this.onPlanet) {
-			quaternion.normalize();
-			this.transform3.orientation.multiply(quaternion);
-			const offset = this.transform3.pos.clone().sub(this.currentPlanet.transform3.pos);
-			offset.applyQuaternion(quaternion);
-			this.transform3.pos = new THREE.Vector3().addVectors(this.currentPlanet.transform3.pos, offset)
-		} 
-	}
+    console.log(forward);
 
-	startControlLoop(){
-		const clock = new THREE.Clock();
-		const control = () => {
-			const dt = clock.getDelta();
-			this.controlHandler(dt);
-			requestAnimationFrame(control);
-		};
-		control();
-	}
+    const moveAngle = 3 * Math.PI / 180;
+    const turnAngle = 5 * Math.PI / 180;
+
+    if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, -moveAngle));
+    if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(side, moveAngle));
+
+    if (this.game.keysPressed["a"]) this.forward.copy(forward.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, turnAngle))); 
+    if (this.game.keysPressed["d"]) this.forward.copy(forward.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, -turnAngle)));
+
+    if (this.game.keysPressed["ArrowUp"]) console.log("up");
+    if (this.game.keysPressed["ArrowDown"]) console.log("down");
+
+  }
+
+  adjustPosition(quaternion) {
+    if (this.onPlanet) {
+      quaternion.normalize();
+      this.transform3.orientation.multiply(quaternion);
+      const offset = this.transform3.pos.clone().sub(this.currentPlanet.transform3.pos).applyQuaternion(quaternion);
+      this.transform3.pos = new THREE.Vector3().addVectors(this.currentPlanet.transform3.pos, offset)
+
+      this.up.applyQuaternion(quaternion);
+      this.forward.applyQuaternion(quaternion);
+    } 
+  }
+
+  startControlLoop(){
+    const clock = new THREE.Clock();
+    const control = () => {
+      const dt = clock.getDelta();
+      this.controlHandler();
+      requestAnimationFrame(control);
+    };
+    control();
+  }
 }
 
 
