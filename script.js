@@ -7,6 +7,10 @@ class Transform3{
 		this.pos = pos;
 		this.vel = vel;
 
+		const quaternion = new THREE.Quaternion();
+		quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+		this.orientation = quaternion;
+
 		this.netForce = new THREE.Vector3(0.0,0.0,0.0);
 		this.mass = mass;
 		if (this.mass == 0) this.invMass = 1e-12;
@@ -27,6 +31,13 @@ class Transform3{
 		this.pos.addScaledVector(this.vel, dt);
 		//this.vec.multiplyScalar(this.globalDamping); - apply this when I figure out how to incorporate dt inexpensively
 	}
+
+	localToGlobal () {
+
+	}
+	applyLocalForce(newLocalforce) {
+
+	}
 }
 
 
@@ -44,9 +55,10 @@ class Renderable{
 	syncTransformToMesh(){
 		const sync = () => {
 			this.mesh.position.copy(this.transform3.pos);
+			this.mesh.quaternion.copy(this.transform3.orientation);
 			requestAnimationFrame(sync);
 		};
-		sync();
+		sync();	
 	}
 
 	addToScene(){
@@ -211,15 +223,26 @@ class Astronaut extends Renderable{
 	}
 
 	controlHandler(dt){
-		if (this.game.keysPressed["w"]){
-			console.log("W pressed");
-			this.transform3.applyForce(new THREE.Vector3(0,100,0));
-		};
-		if (this.game.keysPressed["a"]) console.log("A key is being pressed!");
-		if (this.game.keysPressed["s"]) this.transform3.applyForce(new THREE.Vector3(0,-100,0));
-		if (this.game.keysPressed["d"]) console.log("D key is being pressed!");
+		const angle = Math.PI / 180;
+		if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle));
+		if (this.game.keysPressed["a"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, -1, 0), angle));
+		if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), angle));
+		if (this.game.keysPressed["d"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle));
+
+		if (this.game.keysPressed["ArrowUp"]) console.log("up");
+		if (this.game.keysPressed["ArrowDown"]) console.log("down");
 
 		console.log(this.transform3.pos);
+	}
+
+	adjustPosition(quaternion) {
+		if (this.onPlanet) {
+			quaternion.normalize();
+			this.transform3.orientation.multiply(quaternion);
+			const offset = this.transform3.pos.clone().sub(this.currentPlanet.transform3.pos);
+			offset.applyQuaternion(quaternion);
+			this.transform3.pos = new THREE.Vector3().addVectors(this.currentPlanet.transform3.pos, offset)
+		} 
 	}
 
 	startControlLoop(){
@@ -268,6 +291,9 @@ G.addPlanet(P1);
 G.addPlanet(P2);
 G.addAstronaut(A);
 
+A.onPlanet = true;
+A.currentPlanet = P1;
+
 // Start rendering
 G.startRenderLoop();
 
@@ -278,4 +304,4 @@ A.startControlLoop();
 // console.log(P1.checkSphereIntersection(A.interactionSphere));
 
 // Temporarily game loop
-//G.startPhysicsLoop();
+G.startPhysicsLoop();
