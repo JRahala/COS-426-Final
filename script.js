@@ -69,26 +69,43 @@ class Renderable{
 		this.scene.remove(this.mesh);
 	}
 
-	checkSphereIntersection(sphere) {
-		console.log("THIS is ", this, "SPHERE", sphere);
-		const verticesInside = [];
-		const seenVertices = new Set(); // Use a Set to track unique vertex positions
+	static checkEdgeSphereIntersection(v1, v2, center, radius) {
+		const edge = new THREE.Vector3().subVectors(v2, v1);
+		const sphereToEdgeStart = new THREE.Vector3().subVectors(v1, center);
+		const projectionLength = sphereToEdgeStart.dot(edge) / edge.length();
+		const closestPointOnEdge = sphereToEdgeStart.add(edge.normalize().multiplyScalar(projectionLength));
+		return closestPointOnEdge.length() <= radius;
+	}
 
-		for (let i = 0; i < this.geometry.attributes.position.count; i++) {
-			const vertex = new THREE.Vector3();
-			vertex.fromBufferAttribute(this.geometry.attributes.position, i);
-			vertex.applyMatrix4(this.mesh.matrixWorld);
-			// Convert vertex to a string key with fixed precision for uniqueness
-			const key = vertex.toArray().map((v) => v.toFixed(5)).join(',');
-			if (!seenVertices.has(key) && vertex.distanceTo(sphere.mesh.position) <= sphere.geometry.parameters.radius) {
-				seenVertices.add(key); // Mark this vertex as seen
-				verticesInside.push(vertex.clone());
+	checkSphereFaceIntersection(sphere) {
+		const facesInside = [];
+		const vertex = new THREE.Vector3();
+		const sphereCenter = sphere.mesh.position;
+		const sphereRadius = sphere.geometry.parameters.radius;
+		const positionAttribute = this.geometry.attributes.position;
+		const indexAttribute = this.geometry.index;
+	
+		for (let i = 0; i < indexAttribute.count; i += 3) {
+			const v0 = new THREE.Vector3().fromBufferAttribute(positionAttribute, indexAttribute.getX(i + 0)).applyMatrix4(this.mesh.matrixWorld);
+			const v1 = new THREE.Vector3().fromBufferAttribute(positionAttribute, indexAttribute.getX(i + 1)).applyMatrix4(this.mesh.matrixWorld);
+			const v2 = new THREE.Vector3().fromBufferAttribute(positionAttribute, indexAttribute.getX(i + 2)).applyMatrix4(this.mesh.matrixWorld);
+
+			const vertexInside = 
+				v0.distanceTo(sphereCenter) <= sphereRadius ||
+				v1.distanceTo(sphereCenter) <= sphereRadius ||
+				v2.distanceTo(sphereCenter) <= sphereRadius;
+	
+			const edgeIntersect = 
+				Renderable.checkEdgeSphereIntersection(v0, v1, sphereCenter, sphereRadius) ||
+				Renderable.checkEdgeSphereIntersection(v1, v2, sphereCenter, sphereRadius) ||
+				Renderable.checkEdgeSphereIntersection(v2, v0, sphereCenter, sphereRadius);
+	
+			if (vertexInside || edgeIntersect) {
+				facesInside.push([v0, v1, v2]);
 			}
 		}
-		console.log("Unique Vertices Inside:", verticesInside);
-		return verticesInside;
+		return facesInside;
 	}
-	
 }
 
 
@@ -187,8 +204,17 @@ class Game{
 					planet.transform3.resetForce();
 
 					// TODO: this should be generalized to all meshes later
-					const sphereIntersectionVertices = planet.checkSphereIntersection(this.astronaut.interactionSphere);
-					console.log("SPHERE INT", sphereIntersectionVertices);
+					const intersectionFaces = planet.checkSphereFaceIntersection(this.astronaut.interactionSphere);
+					for (let i = 0; i < intersectionFaces.length; i++) {
+						const [v0, v1, v2] = intersectionFaces[i];
+				
+						// Calculate the normal for the triangle
+						const edge1 = new THREE.Vector3().subVectors(v1, v0);
+						const edge2 = new THREE.Vector3().subVectors(v2, v0);
+						const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+				
+						this.astronaut.transform3.applyForce(normal);
+					}
 				}
 			}
 
