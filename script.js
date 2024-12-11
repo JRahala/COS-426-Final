@@ -231,10 +231,22 @@ class Game{
 
 
 class Planet extends Renderable{
+	static randomizeTexture() {
+        const textures = ['textures/water.jpg', 'textures/adam.jpg']
+        const randomIndex = Math.floor(Math.random() * textures.length)
+        return textures[randomIndex];
+    }
+
 	constructor(game, pos, radius, mass){
 		const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
 		const geometry = new THREE.SphereGeometry(radius, 32, 16);
-		const material = new THREE.MeshStandardMaterial();
+
+		
+		const textureLoader = new THREE.TextureLoader();
+        const texture = textureLoader.load(Planet.randomizeTexture());
+        const material = new THREE.MeshStandardMaterial({
+            map: texture,
+          });
 		super(game.scene, transform3, geometry, material);
 		this.game = game;
 	}
