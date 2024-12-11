@@ -1,7 +1,8 @@
 // SOMETHING IS ****NOT**** GOING WRONG IN THE INTEGRATE FUNCTION 
 
 class Transform3{
-	globalDamping = 0.99;
+	static globalDamping = 0.99;
+	static G = 100;
 
 	constructor(pos, vel, mass){
 		this.pos = pos;
@@ -32,12 +33,16 @@ class Transform3{
 		//this.vec.multiplyScalar(this.globalDamping); - apply this when I figure out how to incorporate dt inexpensively
 	}
 
-	localToGlobal () {
-
+	calculateGravity(other){
+		const distanceVector = new THREE.Vector3().subVectors(other.pos, this.pos);
+		const distanceSquared = distanceVector.lengthSq();
+		if (distanceSquared < 1e-12) return new THREE.Vector3(0, 0, 0);
+		const forceMagnitude = (Transform3.G * this.mass * other.mass) / distanceSquared;
+		const force = distanceVector.normalize().multiplyScalar(forceMagnitude);
+		console.log(force);
+		return force;
 	}
-	applyLocalForce(newLocalforce) {
-
-	}
+	
 }
 
 
@@ -197,22 +202,29 @@ class Game{
 		const physics = () => {
 			const dt = clock.getDelta();
 
-			// NOT CALCULATING GRAVITY YET, JUST HARDCODED FORCES
+			for (const planet of this.planets){
+				// gravity between planets
+				for (const other_planet of this.planets){
+					if (planet === other_planet) continue;
+					else planet.transform3.applyForce(planet.transform3.calculateGravity(other_planet.transform3));
+				}
+				// gravity between planets and astronaut
+				this.astronaut.transform3.applyForce(this.astronaut.transform3.calculateGravity(planet.transform3));
+			}
+
 			if (this.planets != []){
 				for (const planet of this.planets){
 					planet.transform3.integrate(dt);
 					planet.transform3.resetForce();
 
-					// TODO: this should be generalized to all meshes later
+					// TODO: this should be generalized to all meshes later - CHECK FOR ASTRONAUT COLLISION
 					const intersectionFaces = planet.checkSphereFaceIntersection(this.astronaut.interactionSphere);
+					const buyouncy = 100;
 					for (let i = 0; i < intersectionFaces.length; i++) {
 						const [v0, v1, v2] = intersectionFaces[i];
-				
-						// Calculate the normal for the triangle
 						const edge1 = new THREE.Vector3().subVectors(v1, v0);
 						const edge2 = new THREE.Vector3().subVectors(v2, v0);
-						const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-				
+						const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize().multiplyScalar(buyouncy/intersectionFaces.length);
 						this.astronaut.transform3.applyForce(normal);
 					}
 				}
@@ -321,8 +333,8 @@ console.log("Hello world");
 const G = new Game();
 const A = new Astronaut(G, new THREE.Vector3(-20,31,-100), 10);
 
-const P1 = new Planet(G, new THREE.Vector3(-20,20,-100), 10, 1);
-const P2 = new Planet(G, new THREE.Vector3(40,10,-150), 10, 1);
+const P1 = new Planet(G, new THREE.Vector3(-20,20,-100), 10, 10);
+const P2 = new Planet(G, new THREE.Vector3(40,10,-150), 10, 10);
 
 // Add renderables to scene
 G.addPlanet(P1);
