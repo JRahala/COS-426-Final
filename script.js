@@ -1,4 +1,4 @@
-// SOMETHING IS GOING WRONG IN THE INTEGRATE FUNCTION 
+// SOMETHING IS ****NOT**** GOING WRONG IN THE INTEGRATE FUNCTION 
 
 class Transform3{
 	globalDamping = 0.99;
@@ -69,17 +69,26 @@ class Renderable{
 		this.scene.remove(this.mesh);
 	}
 
-	checkSphereIntersection(sphere){
+	checkSphereIntersection(sphere) {
+		console.log("THIS is ", this, "SPHERE", sphere);
 		const verticesInside = [];
-		const vertex = new THREE.Vector3();
+		const seenVertices = new Set(); // Use a Set to track unique vertex positions
+
 		for (let i = 0; i < this.geometry.attributes.position.count; i++) {
+			const vertex = new THREE.Vector3();
 			vertex.fromBufferAttribute(this.geometry.attributes.position, i);
-			vertex.applyMatrix4(this.mesh.matrixWorld);	
-			console.log(sphere);
-			if (vertex.distanceTo(sphere.mesh.position) <= sphere.geometry.parameters.radius) verticesInside.push(vertex.clone());
+			vertex.applyMatrix4(this.mesh.matrixWorld);
+			// Convert vertex to a string key with fixed precision for uniqueness
+			const key = vertex.toArray().map((v) => v.toFixed(5)).join(',');
+			if (!seenVertices.has(key) && vertex.distanceTo(sphere.mesh.position) <= sphere.geometry.parameters.radius) {
+				seenVertices.add(key); // Mark this vertex as seen
+				verticesInside.push(vertex.clone());
+			}
 		}
+		console.log("Unique Vertices Inside:", verticesInside);
 		return verticesInside;
 	}
+	
 }
 
 
@@ -176,6 +185,10 @@ class Game{
 				for (const planet of this.planets){
 					planet.transform3.integrate(dt);
 					planet.transform3.resetForce();
+
+					// TODO: this should be generalized to all meshes later
+					const sphereIntersectionVertices = planet.checkSphereIntersection(this.astronaut.interactionSphere);
+					console.log("SPHERE INT", sphereIntersectionVertices);
 				}
 			}
 
@@ -203,8 +216,8 @@ class Planet extends Renderable{
 
 
 class Astronaut extends Renderable{
-	radius = 10;
-	interactionSphereRadius = 20;
+	static radius = 1;
+	static interactionSphereRadius = 1.5;
 
 	constructor(game, pos, mass){
 		const transform3 = new Transform3(pos, new THREE.Vector3(0,0,0), mass);
@@ -215,7 +228,7 @@ class Astronaut extends Renderable{
 		this.game = game;
 		this.onPlanet = false;
 		this.currentPlanet = null;
-
+		
 		// interaction sphere for debug purposes
 		const interactionSphereGeometry = new THREE.SphereGeometry(Astronaut.interactionSphereRadius);
 		const interactionSphereMaterial = new THREE.MeshBasicMaterial( { color: 0x0000ff, transparent: true, opacity: 0.5 } );
@@ -224,15 +237,14 @@ class Astronaut extends Renderable{
 
 	controlHandler(dt){
 		const angle = Math.PI / 180;
-		if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle));
+		if (this.game.keysPressed["w"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), angle));
 		if (this.game.keysPressed["a"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, -1, 0), angle));
-		if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), angle));
+		if (this.game.keysPressed["s"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle));
 		if (this.game.keysPressed["d"]) this.adjustPosition(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle));
 
 		if (this.game.keysPressed["ArrowUp"]) console.log("up");
 		if (this.game.keysPressed["ArrowDown"]) console.log("down");
 
-		console.log(this.transform3.pos);
 	}
 
 	adjustPosition(quaternion) {
