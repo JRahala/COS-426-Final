@@ -10,14 +10,17 @@ const G = new Game();
 G.initRenderer();
 G.initControls();
 
-const t3 = new Transform3(new THREE.Vector3(0,0,-100), 1);
+const t3 = new Transform3(new THREE.Vector3(0,10,-100), 1);
 const geo = new THREE.SphereGeometry(10, 10, 10);
 const P = new Player(G, t3, null);
+
+const TempBoxTransform = new Transform3(new THREE.Vector3(0,1,-100), 1);
+const TempBoxGeometry = new THREE.BoxGeometry(500,1,500);
+const TempBox = new Renderable(G, TempBoxTransform, TempBoxGeometry);
 
 G.initRenderLoop();
 G.initPhysicsLoop();
 G.initControlLoop();
-
 G.addPlayer(P);
 
 const gridHelper = new THREE.GridHelper(5000, 100);

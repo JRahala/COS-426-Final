@@ -1,8 +1,7 @@
 import { Transform3 } from "./Transform3.js";
 import { Renderable } from "./Renderable.js";
 
-
-class Room extends Renderable {
+export class Room extends Renderable {
     constructor(game, transform3, floorMaterial, wallMaterial, floorGeometry, wallGeometry) {
         super(game, transform3, floorGeometry, floorMaterial);
         this.wallMaterial = wallMaterial;

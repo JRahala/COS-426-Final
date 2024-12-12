@@ -1,6 +1,6 @@
 export class Transform3{
     constructor(pos, mass){
-        this.pos = new THREE.Vector3();
+        this.pos = pos;
         this.vel = new THREE.Vector3();
         this.rot = new THREE.Quaternion();
 
