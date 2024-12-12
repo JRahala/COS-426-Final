@@ -62,9 +62,19 @@ export class Game{
         const clock = new THREE.Clock();
         const physicsLoop = () => {
             const dt = clock.getDelta();
-            if (this.player) this.player.updateCollisions();
+            if (this.player) this.player.updateCollisions(dt);
             requestAnimationFrame(physicsLoop);
         }
         physicsLoop();
+    }
+
+    initControlLoop(){
+        const clock = new THREE.Clock();
+        const controlLoop = () => {
+            const dt = clock.getDelta();
+            if (this.player) this.player.controlHandler(dt);
+            requestAnimationFrame(controlLoop);
+        }
+        controlLoop();
     }
 }

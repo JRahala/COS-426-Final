@@ -7,12 +7,17 @@ export class Player extends Renderable{
         super(game, transform3, geometry, axisSize);
 
         const collisionGeometry = new THREE.SphereGeometry(20, 16, 16);
-        const collisionSphere = new Renderable(game, transform3, collisionGeometry);
+        const collisionMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            transparent: true,
+            opacity: 0.5,
+        });
+        this.collisionSphere = new Renderable(game, transform3, collisionGeometry, collisionMaterial);
         this.raycaster = new THREE.Raycaster();
     }
 
-    updateCollisions() {
-        const objectsToCheck = this.scene.children.filter(
+    updateCollisions(dt) {
+        const objectsToCheck = this.game.scene.children.filter(
             (object) => object !== this.collisionSphere.mesh && object.isMesh
         );
 
@@ -22,5 +27,12 @@ export class Player extends Renderable{
             console.log('Collided with face:', intersection.face);
             console.log('Intersection details:', intersection);
         });
+    }
+
+    controlHandler(dt){
+        if (this.game.keys["w"]) console.log("W pressed");
+        if (this.game.keys["a"]) console.log("A pressed");
+        if (this.game.keys["s"]) console.log("S pressed");
+        if (this.game.keys["d"]) console.log("D pressed");
     }
 }
