@@ -1,4 +1,3 @@
-import { Transform3 } from "./Transform3.js";
 import { Renderable } from "./Renderable.js";
 
 export class Player extends Renderable{
@@ -23,4 +22,16 @@ export class Player extends Renderable{
             console.log('Intersection details:', intersection);
         });
     }
+
+    updateMovement(dt) {
+        const speed = 10;
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.transform3.rot);
+        if (this.game.keys['w']) this.transform3.pos.addScaledVector(forward, speed * dt);
+        if (this.game.keys['s']) this.transform3.pos.addScaledVector(forward, -speed * dt);
+    
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.transform3.rot);
+        if (this.game.keys['d']) this.transform3.pos.addScaledVector(right, speed * dt);
+        if (this.game.keys['a']) this.transform3.pos.addScaledVector(right, -speed * dt);
+    }
+    
 }

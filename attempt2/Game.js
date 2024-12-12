@@ -67,4 +67,10 @@ export class Game{
         }
         physicsLoop();
     }
+
+    gameLoop(roomManager) {
+        roomManager.updateRooms();
+        this.player.updateCollisions();
+        requestAnimationFrame(gameLoop);
+    }
 }

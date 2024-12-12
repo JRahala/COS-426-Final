@@ -56,7 +56,6 @@ class UnionFind {
 
 function generateMaze(width, height) {
   const maze = new Array(height).fill(null).map(() => new Array(width).fill(1));
-  const stack = [];
   const visited = new Array(height).fill(null).map(() => new Array(width).fill(false));
   const directions = [
     [0, 2],  // Move down
@@ -96,13 +95,40 @@ function generateMaze(width, height) {
     }
   }
 
-  // Start carving from the top-left corner
-  carve(1, 1);
+  // Find the center of the maze
+  const centerX = Math.floor(width / 2);
+  const centerY = Math.floor(height / 2);
+
+  // Ensure the starting point at the center is carved out
+  carve(centerX, centerY);
 
   return maze;
 }
 
 
+function checkCollisions(player, walls) {
+  const playerBox = new THREE.Box3().setFromObject(player.mesh);
+  for (const wall of walls) {
+    const wallBox = new THREE.Box3().setFromObject(wall);
+    if (playerBox.intersectsBox(wallBox)) {
+      // Allow slight overlap by checking specific axis distances
+      const wallCenter = wallBox.getCenter(new THREE.Vector3());
+      const playerCenter = playerBox.getCenter(new THREE.Vector3());
+      const distanceX = Math.abs(playerCenter.x - wallCenter.x);
+      const distanceZ = Math.abs(playerCenter.z - wallCenter.z);
+
+      // Allow overlap if within a small margin (e.g., 0.2 units)
+      if (distanceX < 0.7 && distanceZ < 0.7) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
+// Store Wall Objects for Collision Detection
+const walls = [];
 function createMaze() {
   const mazeData = generateMaze(mazeWidth, mazeHeight);
 
@@ -114,44 +140,87 @@ function createMaze() {
         const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
         wallMesh.position.set(j, 1, i);
         scene.add(wallMesh);
+        walls.push(wallMesh); // Add to walls array for collision detection
       }
     }
   }
 }
 
-
 createMaze();
 
-class Player { 
-  constructor(scene, x, y, z) { 
-    const geometry = new THREE.SphereGeometry(0.5, 32, 32); 
-    const material = new THREE.MeshBasicMaterial({ color: 0xffff00 }); 
-    this.mesh = new THREE.Mesh(geometry, material); 
-    this.mesh.position.set(x, y, z); 
-    scene.add(this.mesh); 
-  } 
-  updatePosition(delta, camera) { 
-    if (moveForward) { 
-      this.mesh.position.x -= delta * Math.sin(camera.rotation.y); 
-      this.mesh.position.z -= delta * Math.cos(camera.rotation.y); 
-    } 
-    if (moveBackward) { 
-      this.mesh.position.x += delta * Math.sin(camera.rotation.y); 
-      this.mesh.position.z += delta * Math.cos(camera.rotation.y); 
-    } 
-    if (turnLeft) { 
-      camera.rotation.y += delta; 
-    } 
-    if (turnRight) { 
-      camera.rotation.y -= delta; 
-    } 
-    camera.position.set(this.mesh.position.x, this.mesh.position.y + 1, this.mesh.position.z); 
-  } 
-} 
+// Add Trail Spheres to Simulate Running
+class Trail {
+  constructor(scene) {
+    this.spheres = [];
+    this.scene = scene;
+  }
+
+  addSphere(position) {
+    const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.position.copy(position);
+    this.scene.add(sphere);
+    this.spheres.push({ mesh: sphere, life: 1.0 });
+  }
+
+  update(dt) {
+    this.spheres.forEach((sphere, index) => {
+      sphere.life -= dt;
+      sphere.mesh.material.opacity = sphere.life;
+      sphere.mesh.material.transparent = true;
+      if (sphere.life <= 0) {
+        this.scene.remove(sphere.mesh);
+        this.spheres.splice(index, 1);
+      }
+    });
+  }
+}
+
+const trail = new Trail(scene);
+
+class Player {
+  constructor(scene, x, y, z) {
+    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, z);
+    scene.add(this.mesh);
+  }
+
+  updatePosition(delta, camera, walls) {
+    const prevPosition = this.mesh.position.clone(); // Save previous position for collision
+    if (moveForward) {
+      this.mesh.position.x -= delta * Math.sin(camera.rotation.y);
+      this.mesh.position.z -= delta * Math.cos(camera.rotation.y);
+    }
+    if (moveBackward) {
+      this.mesh.position.x += delta * Math.sin(camera.rotation.y);
+      this.mesh.position.z += delta * Math.cos(camera.rotation.y);
+    }
+    if (turnLeft) {
+      camera.rotation.y += delta;
+    }
+    if (turnRight) {
+      camera.rotation.y -= delta;
+    }
+    camera.position.set(this.mesh.position.x, this.mesh.position.y + 1, this.mesh.position.z);
+
+    // Collision Detection
+    if (checkCollisions(this, walls)) {
+      this.mesh.position.copy(prevPosition); // Revert position if collision detected
+    }
+
+    // Add spheres when moving
+    if (moveForward || moveBackward) {
+      trail.addSphere(this.mesh.position.clone());
+    }
+  }
+}
 
 const player = new Player(scene, centerX, 0.5, centerY);
 
-// First-person controls
+// First-person controls (no changes needed here)
 let moveForward = false;
 let moveBackward = false;
 let turnLeft = false;
@@ -225,7 +294,8 @@ document.addEventListener('keyup', (event) => {
 
 function update(dt) {
   const moveSpeed = dt * 10;
-  player.updatePosition(moveSpeed, camera);
+  player.updatePosition(moveSpeed, camera, walls);
+  trail.update(dt); // Update trail spheres
 }
 
 const clock = new THREE.Clock();
@@ -238,6 +308,3 @@ function animate() {
 }
 
 animate();
-
-
-
