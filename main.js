@@ -7,8 +7,8 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const mazeWidth = 21;
-const mazeHeight = 21;
+const mazeWidth = 45;
+const mazeHeight = 45;
 const centerX = Math.floor(mazeWidth / 2);
 const centerY = Math.floor(mazeHeight / 2);
 
@@ -223,14 +223,16 @@ document.addEventListener('keyup', (event) => {
   }
 });
 
-function update() {
-  const delta = 0.1; 
-  player.updatePosition(delta, camera);
+function update(dt) {
+  const moveSpeed = dt * 10;
+  player.updatePosition(moveSpeed, camera);
 }
 
+const clock = new THREE.Clock();
 function animate() {
+  const dt = clock.getDelta();
   requestAnimationFrame(animate);
-  update();
+  update(dt);
   const activeCamera = useFirstPersonCamera ? camera : overheadCamera;
   renderer.render(scene, activeCamera);
 }

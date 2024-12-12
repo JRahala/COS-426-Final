@@ -11,7 +11,7 @@ G.initControls();
 
 const t3 = new Transform3(new THREE.Vector3(0,0,-100), 1);
 const geo = new THREE.SphereGeometry(10, 10, 10);
-const A = new Renderable(t3, geo, null);
+const A = new Renderable(G, t3, geo, null);
 
 G.initRenderLoop();
 G.initPhysicsLoop();
