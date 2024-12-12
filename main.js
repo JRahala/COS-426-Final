@@ -106,29 +106,6 @@ function generateMaze(width, height) {
 }
 
 
-function checkCollisions(player, walls) {
-  const playerBox = new THREE.Box3().setFromObject(player.mesh);
-  for (const wall of walls) {
-    const wallBox = new THREE.Box3().setFromObject(wall);
-    if (playerBox.intersectsBox(wallBox)) {
-      // Allow slight overlap by checking specific axis distances
-      const wallCenter = wallBox.getCenter(new THREE.Vector3());
-      const playerCenter = playerBox.getCenter(new THREE.Vector3());
-      const distanceX = Math.abs(playerCenter.x - wallCenter.x);
-      const distanceZ = Math.abs(playerCenter.z - wallCenter.z);
-
-      // Allow overlap if within a small margin (e.g., 0.2 units)
-      if (distanceX < 0.7 && distanceZ < 0.7) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-
-// Store Wall Objects for Collision Detection
-const walls = [];
 function createMaze() {
   const mazeData = generateMaze(mazeWidth, mazeHeight);
 
@@ -140,44 +117,12 @@ function createMaze() {
         const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
         wallMesh.position.set(j, 1, i);
         scene.add(wallMesh);
-        walls.push(wallMesh); // Add to walls array for collision detection
       }
     }
   }
 }
 
 createMaze();
-
-// Add Trail Spheres to Simulate Running
-class Trail {
-  constructor(scene) {
-    this.spheres = [];
-    this.scene = scene;
-  }
-
-  addSphere(position) {
-    const geometry = new THREE.SphereGeometry(0.2, 16, 16);
-    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const sphere = new THREE.Mesh(geometry, material);
-    sphere.position.copy(position);
-    this.scene.add(sphere);
-    this.spheres.push({ mesh: sphere, life: 1.0 });
-  }
-
-  update(dt) {
-    this.spheres.forEach((sphere, index) => {
-      sphere.life -= dt;
-      sphere.mesh.material.opacity = sphere.life;
-      sphere.mesh.material.transparent = true;
-      if (sphere.life <= 0) {
-        this.scene.remove(sphere.mesh);
-        this.spheres.splice(index, 1);
-      }
-    });
-  }
-}
-
-const trail = new Trail(scene);
 
 class Player {
   constructor(scene, x, y, z) {
@@ -298,9 +243,7 @@ function update(dt) {
   trail.update(dt); // Update trail spheres
 }
 
-const clock = new THREE.Clock();
 function animate() {
-  const dt = clock.getDelta();
   requestAnimationFrame(animate);
   update(dt);
   const activeCamera = useFirstPersonCamera ? camera : overheadCamera;
