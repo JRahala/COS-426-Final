@@ -1,236 +1,241 @@
-class CameraController{
-    constructor(camera, domElement){
-        this.camera = camera;
-        this.domElement = domElement;
+// Scene, Camera, and Renderer
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const overheadCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
 
-        this.speed = 0.5;
-        this.mouseSensitivity = 0.1;
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-        this.keysPressed = {};
-        this.isDragging = false;
-        this.previousMousePosition = {x:0, y:0};
+const mazeWidth = 21;
+const mazeHeight = 21;
+const centerX = Math.floor(mazeWidth / 2);
+const centerY = Math.floor(mazeHeight / 2);
 
-        this.initControls();
-        this.startUpdateLoop();
+camera.position.set(centerX, 2, centerY);
+overheadCamera.position.set(centerX, 50, centerY); // Higher view for better coverage
+overheadCamera.rotation.x = -Math.PI / 2;
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(1, 1, 1);
+scene.add(directionalLight);
+
+// Union-Find Data Structure
+class UnionFind {
+  constructor(size) {
+    this.parent = new Array(size).fill(0).map((_, index) => index);
+    this.rank = new Array(size).fill(1);
+  }
+
+  find(x) {
+    if (this.parent[x] !== x) {
+      this.parent[x] = this.find(this.parent[x]);
     }
-    
-    initControls(){
-        window.addEventListener("keydown", (event) => {
-            this.keysPressed[event.key.toLowerCase()] = true;
-        });
-        
-        window.addEventListener("keyup", (event) => {
-            this.keysPressed[event.key.toLowerCase()] = false;
-        });
+    return this.parent[x];
+  }
 
-        this.domElement.addEventListener("mousedown", (event) => {
-            this.isDragging = true;
-            this.previousMousePosition.x = event.clientX;
-            this.previousMousePosition.y = event.clientY;
-        });
+  union(x, y) {
+    const rootX = this.find(x);
+    const rootY = this.find(y);
 
-        this.domElement.addEventListener("mousemove", (event) => {
-            if (this.isDragging){
-                const dx = event.clientX - this.previousMousePosition.x;
-                const dy = event.clientY - this.previousMousePosition.y;
-
-                this.camera.rotation.y -= dx * this.mouseSensitivity * 0.01;
-                this.camera.rotation.x -= dy * this.mouseSensitivity * 0.01;
-                
-                this.camera.rotation.x = Math.max(
-                    -Math.PI/2,
-                    Math.min(Math.PI/2, this.camera.rotation.x)
-                );
-
-                this.previousMousePosition.x = event.clientX;
-                this.previousMousePosition.y = event.clientY;
-            }
-        });
-
-        this.domElement.addEventListener("mouseup", () => {
-            this.isDragging = false;
-        });
+    if (rootX !== rootY) {
+      if (this.rank[rootX] > this.rank[rootY]) {
+        this.parent[rootY] = rootX;
+      } else if (this.rank[rootX] < this.rank[rootY]) {
+        this.parent[rootX] = rootY;
+      } else {
+        this.parent[rootY] = rootX;
+        this.rank[rootX] += 1;
+      }
     }
-
-    startUpdateLoop() {
-        const update = () => {
-            const moveStep = this.speed;
-            const forward = new THREE.Vector3();
-            this.camera.getWorldDirection(forward);
-            const right = new THREE.Vector3();
-            right.crossVectors(forward, this.camera.up).normalize();
-            const up = this.camera.up.clone();
-
-            if (this.keysPressed["w"]) this.camera.position.add(forward.multiplyScalar(moveStep));
-            if (this.keysPressed["s"]) this.camera.position.add(forward.multiplyScalar(-moveStep));
-            if (this.keysPressed["a"]) this.camera.position.add(right.multiplyScalar(-moveStep));
-            if (this.keysPressed["d"]) this.camera.position.add(right.multiplyScalar(moveStep));
-            if (this.keysPressed["arrowup"]) this.camera.position.add(up.multiplyScalar(moveStep));
-            if (this.keysPressed["arrowdown"]) this.camera.position.add(up.multiplyScalar(-moveStep));
-
-            requestAnimationFrame(update);
-        };
-
-        update();
-    }
+  }
 }
 
-class Transform{
-    
+function generateMaze(width, height) {
+  const maze = new Array(height).fill(null).map(() => new Array(width).fill(1));
+  const stack = [];
+  const visited = new Array(height).fill(null).map(() => new Array(width).fill(false));
+  const directions = [
+    [0, 2],  // Move down
+    [0, -2], // Move up
+    [2, 0],  // Move right
+    [-2, 0], // Move left
+  ];
 
-    constructor(){
-        this.pos = new THREE.Vector3(0,0,0);
-        this.vel = new THREE.Vector3(0,0,0);
-
-        this.mass = 5e3;
-        this.inv_mass = 1/this.mass;
-        this.net_force = new THREE.Vector3(0,0,0);
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
     }
+    return array;
+  }
 
-    reset_force(){
-        this.net_force = new THREE.Vector3(0,0,0);
+  function isInBounds(x, y) {
+    return x > 0 && x < width - 1 && y > 0 && y < height - 1;
+  }
+
+  function carve(x, y) {
+    visited[y][x] = true;
+    maze[y][x] = 0;
+
+    // Shuffle the directions for randomized paths
+    shuffle(directions);
+
+    for (const [dx, dy] of directions) {
+      const nx = x + dx;
+      const ny = y + dy;
+
+      if (isInBounds(nx, ny) && !visited[ny][nx]) {
+        // Remove the wall between the current cell and the next cell
+        maze[y + dy / 2][x + dx / 2] = 0;
+        carve(nx, ny);
+      }
     }
+  }
 
-    add_force(force){
-        this.net_force.add(force);
+  // Start carving from the top-left corner
+  carve(1, 1);
+
+  return maze;
+}
+
+
+function createMaze() {
+  const mazeData = generateMaze(mazeWidth, mazeHeight);
+
+  for (let i = 0; i < mazeData.length; i++) {
+    for (let j = 0; j < mazeData[i].length; j++) {
+      if (mazeData[i][j] === 1) {
+        const wallGeometry = new THREE.BoxGeometry(1, 2, 1);
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+        const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+        wallMesh.position.set(j, 1, i);
+        scene.add(wallMesh);
+      }
     }
+  }
+}
 
-    integrate(deltaTime) {
-        if (this.inv_mass > 0) {
-            const acceleration = this.net_force.clone().multiplyScalar(this.inv_mass);
-            this.vel.add(acceleration.multiplyScalar(deltaTime));
-            this.pos.add(this.vel.clone().multiplyScalar(deltaTime));
+
+createMaze();
+
+class Player { 
+  constructor(scene, x, y, z) { 
+    const geometry = new THREE.SphereGeometry(0.5, 32, 32); 
+    const material = new THREE.MeshBasicMaterial({ color: 0xffff00 }); 
+    this.mesh = new THREE.Mesh(geometry, material); 
+    this.mesh.position.set(x, y, z); 
+    scene.add(this.mesh); 
+  } 
+  updatePosition(delta, camera) { 
+    if (moveForward) { 
+      this.mesh.position.x -= delta * Math.sin(camera.rotation.y); 
+      this.mesh.position.z -= delta * Math.cos(camera.rotation.y); 
+    } 
+    if (moveBackward) { 
+      this.mesh.position.x += delta * Math.sin(camera.rotation.y); 
+      this.mesh.position.z += delta * Math.cos(camera.rotation.y); 
+    } 
+    if (turnLeft) { 
+      camera.rotation.y += delta; 
+    } 
+    if (turnRight) { 
+      camera.rotation.y -= delta; 
+    } 
+    camera.position.set(this.mesh.position.x, this.mesh.position.y + 1, this.mesh.position.z); 
+  } 
+} 
+
+const player = new Player(scene, centerX, 0.5, centerY);
+
+// First-person controls
+let moveForward = false;
+let moveBackward = false;
+let turnLeft = false;
+let turnRight = false;
+let lookBack = false;
+let originalRotationSet = false;
+let originalRotation = camera.rotation.y;
+let useFirstPersonCamera = true;
+
+document.addEventListener('keydown', (event) => {
+  switch (event.code) {
+    case 'ArrowUp':
+    case 'KeyW':
+      moveForward = true;
+      break;
+    case 'ArrowDown':
+    case 'KeyS':
+      moveBackward = true;
+      break;
+    case 'ArrowLeft':
+    case 'KeyA':
+      turnLeft = true;
+      break;
+    case 'ArrowRight':
+    case 'KeyD':
+      turnRight = true;
+      break;
+    case 'KeyT':
+      useFirstPersonCamera = !useFirstPersonCamera;
+      break;
+    case 'KeyL':
+      if (!lookBack) {
+        if (!originalRotationSet) {
+          originalRotation = camera.rotation.y;
+          originalRotationSet = true;
         }
-    }
+        camera.rotation.y = originalRotation + Math.PI; // Turn the camera around
+        lookBack = true;
+      }
+      break;
+  }
+});
+
+document.addEventListener('keyup', (event) => {
+  switch (event.code) {
+    case 'ArrowUp':
+    case 'KeyW':
+      moveForward = false;
+      break;
+    case 'ArrowDown':
+    case 'KeyS':
+      moveBackward = false;
+      break;
+    case 'ArrowLeft':
+    case 'KeyA':
+      turnLeft = false;
+      break;
+    case 'ArrowRight':
+    case 'KeyD':
+      turnRight = false;
+      break;
+    case 'KeyL':
+      if (lookBack) {
+        camera.rotation.y = originalRotation; // Reset the camera rotation
+        lookBack = false;
+        originalRotationSet = false;
+      }
+      break;
+  }
+});
+
+function update() {
+  const delta = 0.1; 
+  player.updatePosition(delta, camera);
 }
 
-class Astronaut{
-    constructor(planet){
-        this.planet = planet;
-    }
+function animate() {
+  requestAnimationFrame(animate);
+  update();
+  const activeCamera = useFirstPersonCamera ? camera : overheadCamera;
+  renderer.render(scene, activeCamera);
 }
 
-class Planet{
-    static randomizeTexture() {
-        const textures = ['textures/water.jpg', 'textures/adam.jpg']
-        const randomIndex = Math.floor(Math.random() * textures.length)
-        return textures[randomIndex];
-    }
+animate();
 
-    constructor(position, size){
-        this.transform = new Transform();
-        this.transform.pos.copy(position);
 
-        const textureLoader = new THREE.TextureLoader();
-        const texture = textureLoader.load(Planet.randomizeTexture());
-        this.geometry = new THREE.SphereGeometry(size, 32, 16);
-        this.material = new THREE.MeshStandardMaterial({
-            map: texture,
-          });
-        this.mesh = new THREE.Mesh(this.geometry, this.material);
-        this.mesh.position.copy(position);
-    }
 
-    syncTransformToMesh() {
-        this.mesh.position.copy(this.transform.pos);
-    }
-
-    update(deltaTime) {
-        this.transform.integrate(deltaTime);
-        this.transform.reset_force();
-        this.syncTransformToMesh();
-    }
-}
-
-class Model{
-    constructor(){
-        this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        this.cameraController = new CameraController(this.camera, this.renderer.domElement);
-
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(this.renderer.domElement);
-        window.addEventListener('resize', () => {
-            this.camera.aspect = window.innerWidth / window.innerHeight;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        this.planets = [];
-        this.astronaut = null;
-
-        /* TODO: Hard coded light for now */
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(0,0,1);
-        this.scene.add(light);
-        
-        const am_light = new THREE.AmbientLight( 0x404040 ); // soft white light
-        this.scene.add(am_light);
-        this.camera.position.z = 100;
-        this.camera.position.y = 30;
-
-        // Add axis and grid lines
-        const gridHelper = new THREE.GridHelper(1000, 100); // Grid of size 1000 units with 100 divisions
-        this.scene.add(gridHelper);
-
-        const axesHelper = new THREE.AxesHelper(500); // Axes spanning 500 units in each direction
-        this.scene.add(axesHelper);
-
-        // Add space background
-        const loader = new THREE.TextureLoader();
-        loader.load(
-            "https://cdn.pixabay.com/photo/2016/09/08/12/00/stars-1654074_960_720.jpg", // A free-to-use space texture
-            (texture) => {
-                this.scene.background = texture;
-            }
-        );
-
-        this.startAnimationLoop();
-    }
-
-    add_planet(planet){
-        this.planets.push(planet);
-        this.scene.add(planet.mesh);
-    }
-
-    planets_step(deltaTime) {
-        for (const planet of this.planets) {
-            for (const other_planet of this.planets) {
-                if (planet === other_planet) continue;
-                const direction = other_planet.transform.pos
-                    .clone()
-                    .sub(planet.transform.pos)
-                    .normalize();
-                const r_sqr = planet.transform.pos.distanceToSquared(other_planet.transform.pos);
-                const G = 1;
-                const F = G * planet.transform.mass * other_planet.transform.mass / r_sqr;
-                direction.multiplyScalar(F);
-                planet.transform.add_force(direction);
-            }
-        }
-
-        for (const planet of this.planets) {
-            planet.update(deltaTime);
-        }
-    }
-
-    startAnimationLoop() {
-        const clock = new THREE.Clock();
-        const animate = () => {
-            const deltaTime = clock.getDelta();
-            this.planets_step(deltaTime);
-            this.renderer.render(this.scene, this.camera);
-            requestAnimationFrame(animate);
-        };
-        animate();
-    }
-}
-
-const Mod = new Model();
-const P1 = new Planet(new THREE.Vector3(0,20,-20), 10);
-const P2 = new Planet(new THREE.Vector3(0,-20,-20), 10);
-P1.transform.vel = new THREE.Vector3(-5,0,0);
-P2.transform.vel = new THREE.Vector3(5,0,0);
-Mod.add_planet(P1);
-Mod.add_planet(P2);
