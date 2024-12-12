@@ -181,7 +181,7 @@ const trail = new Trail(scene);
 
 class Player {
   constructor(scene, x, y, z) {
-    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const geometry = new THREE.SphereGeometry(0.2, 32, 32);
     const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.position.set(x, y, z);
@@ -204,7 +204,7 @@ class Player {
     if (turnRight) {
       camera.rotation.y -= delta;
     }
-    camera.position.set(this.mesh.position.x, this.mesh.position.y + 1, this.mesh.position.z);
+    camera.position.set(this.mesh.position.x, this.mesh.position.y + 0.5, this.mesh.position.z);
 
     // Collision Detection
     if (checkCollisions(this, walls)) {
