@@ -8,8 +8,19 @@ export class Player extends Renderable{
 
         const collisionGeometry = new THREE.SphereGeometry(20, 16, 16);
         const collisionSphere = new Renderable(game, transform3, collisionGeometry);
+        this.raycaster = new THREE.Raycaster();
     }
 
-    
+    updateCollisions() {
+        const objectsToCheck = this.scene.children.filter(
+            (object) => object !== this.collisionSphere.mesh && object.isMesh
+        );
 
+        this.raycaster.set(this.transform3.pos, new THREE.Vector3(0, 0, 0));
+        const intersections = this.raycaster.intersectObjects(objectsToCheck, true);
+        intersections.forEach((intersection) => {
+            console.log('Collided with face:', intersection.face);
+            console.log('Intersection details:', intersection);
+        });
+    }
 }

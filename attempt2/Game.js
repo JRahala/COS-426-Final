@@ -19,6 +19,13 @@ export class Game{
 
         const am_light = new THREE.AmbientLight(0x404040);
         this.scene.add(am_light);
+
+        this.player = null;
+        this.currentRoom = null;
+    }
+
+    addPlayer(player){
+        this.player = player;
     }
 
     initRenderer(){
@@ -55,6 +62,7 @@ export class Game{
         const clock = new THREE.Clock();
         const physicsLoop = () => {
             const dt = clock.getDelta();
+            if (this.player) this.player.updateCollisions();
             requestAnimationFrame(physicsLoop);
         }
         physicsLoop();

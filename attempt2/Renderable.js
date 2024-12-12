@@ -12,6 +12,12 @@ export class Renderable{
         this.upAxis = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), this.transform3.pos, 50, 0x00ff00);
         this.rightAxis = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), this.transform3.pos, 50, 0x0000ff);
         this.initSyncTransformToMesh();
+
+        // Automatically add to scene
+        this.game.scene.add(this.mesh);
+        this.game.scene.add(this.forwardAxis);
+        this.game.scene.add(this.upAxis);
+        this.game.scene.add(this.rightAxis);
     }
 
     initSyncTransformToMesh(){
