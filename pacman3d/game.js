@@ -6,6 +6,10 @@ class Ghost{
     this.dc = dc;
     this.tr = tr;
     this.tc = tc;
+
+    this.position = new THREE.Vector2(r, c);
+    this.orientation = 0;
+
     this.state = 0; // 0 = scatter, 1 = chase, 2 = frightened
     // scatter target tiles
     this.str = str;
@@ -94,7 +98,8 @@ class Player{
         this.dr = dr;
         this.dc = dc;
         this.pellets = 0;
-        this.position = new THREE.Vector2(r - 0.5, c - 0.5);
+
+        this.position = new THREE.Vector2(r, c);
         this.orientation = 0;
     }
 }
@@ -155,8 +160,8 @@ class Game{
         let nx = this.player.position.x + dx;
         let ny = this.player.position.y + dy;
 
-        let nr = Math.round(nx + 0.5);
-        let nc = Math.round(ny + 0.5);
+        let nr = Math.round(nx);
+        let nc = Math.round(ny);
 
         if (this.maze[nr][nc] == 1) {
           if (this.maze[nr][this.player.c] != 1) {
@@ -179,6 +184,7 @@ class Game{
         
         this.player.position.x = nx;
         this.player.position.y = ny;
+
         this.player.r = nr; 
         this.player.c = nc;
         
@@ -191,15 +197,29 @@ class Game{
         this.player.dc = Math.round(dy);
       }
 
-      rotatePlayer(angle) {
+      rotatePlayer(angle){
         this.player.orientation += angle;
       }
  
-      moveGhosts(){
+      moveGhosts(speed){
         for (const ghost of this.ghosts){
           const [nextPos, nextDir] = ghost.nextPosition(this.maze);
-          ghost.r = nextPos[0]; ghost.c = nextPos[1];
-          ghost.dr = nextDir[0]; ghost.dc = nextDir[1];
+
+          // move a little bit toward the next pos
+          ghost.position.x = ghost.position.x + speed * (nextPos[0] - ghost.r);
+          ghost.position.y = ghost.position.y + speed * (nextPos[1] - ghost.c);
+
+          // when done moving to the correct next pos
+          if (Math.abs(ghost.position.x - nextPos[0]) < speed && Math.abs(ghost.position.y - nextPos[1]) < speed){
+
+            ghost.r = Math.round(ghost.position.x); 
+            ghost.c = Math.round(ghost.position.y);
+  
+            ghost.dr = nextDir[0]; 
+            ghost.dc = nextDir[1];
+
+            ghost.orientation = Math.atan2(nextDir[1], nextDir[0]); 
+          }
         }
       }
 
@@ -322,23 +342,29 @@ camera.lookAt(19/2-1/2, -10, 0);
 const animate = () => {
     requestAnimationFrame(animate);
 
+    const movementSpeed = 0.03;
+    const rotationSpeed = 0.05;
+
     // Handle player movement based on key state
-    const speed = 0.03;
-    const angle = 0.05;
-    if (keys.w || keys.ArrowUp) G.movePlayer(speed);
-    if (keys.s || keys.ArrowDown) G.movePlayer(-speed);
-    if (keys.a || keys.ArrowLeft) G.rotatePlayer(angle);
-    if (keys.d || keys.ArrowRight) G.rotatePlayer(-angle);
+    if (keys.w || keys.ArrowUp) G.movePlayer(movementSpeed);
+    if (keys.s || keys.ArrowDown) G.movePlayer(-movementSpeed);
+    if (keys.a || keys.ArrowLeft) G.rotatePlayer(rotationSpeed);
+    if (keys.d || keys.ArrowRight) G.rotatePlayer(-rotationSpeed);
+
+    // Move the ghosts
+    G.moveGhosts(movementSpeed);
+    G.updateGhostTargets();
 
     // Rotate pellets for a dynamic effect
     pellets.forEach(pellet => pellet.rotation.y += 0.03);
     powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
 
     // Check for pellet consumption
+    const pelletConsumptionRadius = 0.7071; // allows for diagonal passes
     for (let i = pellets.length - 1; i >= 0; i--) {
         const pellet = pellets[i];
-        if (Math.abs(player.position.x - pellet.position.x) < 0.5 &&
-            Math.abs(player.position.z - pellet.position.z) < 0.5) {
+        if (Math.abs(player.position.x - pellet.position.x) < pelletConsumptionRadius &&
+            Math.abs(player.position.z - pellet.position.z) < pelletConsumptionRadius) {
             scene.remove(pellet); // Remove the pellet from the scene
             pellets.splice(i, 1); // Remove it from the array
         }
@@ -346,8 +372,8 @@ const animate = () => {
 
     for (let i = powerPellets.length - 1; i >= 0; i--) {
         const powerPellet = powerPellets[i];
-        if (Math.abs(player.position.x - powerPellet.position.x) < 0.5 &&
-            Math.abs(player.position.z - powerPellet.position.z) < 0.5) {
+        if (Math.abs(player.position.x - powerPellet.position.x) < pelletConsumptionRadius &&
+            Math.abs(player.position.z - powerPellet.position.z) < pelletConsumptionRadius) {
             scene.remove(powerPellet); // Remove the power-up pellet
             powerPellets.splice(i, 1);
             // Add power-up effect here if needed
@@ -355,10 +381,10 @@ const animate = () => {
     }
 
     // Update positions based on the game state
-    player.position.set(G.player.position.y + 0.5, 0, G.player.position.x + 0.5);
+    player.position.set(G.player.position.y, 0, G.player.position.x);
     
     G.ghosts.forEach((g, i) => {
-        ghosts[i].position.set(g.c, 0.5, g.r);
+        ghosts[i].position.set(g.position.y, 0, g.position.x);
     });
 
     renderer.render(scene, camera);
@@ -405,9 +431,6 @@ window.addEventListener('keydown', (event) => {
         ghost.state = 2;
       }
     }
-
-    G.moveGhosts();
-    G.updateGhostTargets();
 });
 
 window.addEventListener('keyup', (event) => {
