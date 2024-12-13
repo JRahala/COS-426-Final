@@ -1,6 +1,6 @@
-import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/loaders/OBJLoader.js';
+import { OBJLoader } from "./loaders/OBJLoader.js";
 
-export class  addHeads{
+export class addHeads{
   constructor(scene, modelPath, x, y,z) {
       this.scene = scene;
       this.modelPath = modelPath;
@@ -9,18 +9,21 @@ export class  addHeads{
       this.z = z;
       this.manequin = null;
       this.floatDir = 1;
+      this.maxy = y + 1;
+      this.miny = y - 1;
       this.loadModel();
   }
  
   loadModel() {
       const loader = new OBJLoader();
       loader.load(this.modelPath, (obj) => {
-          this.manequin = obj.scene;
-          this.mesh.position.set(this.x,this.y,this.z);
+          this.manequin = obj;
+          this.manequin.position.set(this.x,-this.y,this.z);
+          this.manequin.scale.set(10, 10, 10);  
+          this.manequin.rotation.x = -Math.PI/2;
           this.scene.add(this.manequin);
-          console.log ("model loaded and added to scene")
 
-
+          console.log("model loaded and added to scene")
           this.float();
       },
       undefined,
@@ -39,13 +42,13 @@ export class  addHeads{
           requestAnimationFrame(()=> this.float());
           return;
       }
-      this.headmesh.position.y += 0.01*this.floatDir
+      this.manequin.position.y += 0.05*this.floatDir
 
 
       if (this.manequin.position.y >= this.maxy)
           this.floatDir =-1;
           //move down greater than ... you've reached maxed height
-     else if (headmesh.position.y <= this.miny )
+     else if (this.manequin.position.y <= this.miny )
           this.floatDir = 1;
      requestAnimationFrame(()=> this.float());
   }
