@@ -94,6 +94,8 @@ class Player{
         this.dr = dr;
         this.dc = dc;
         this.pellets = 0;
+        this.position = new THREE.Vector2(r - 0.5, c - 0.5);
+        this.orientation = 0;
     }
 }
 
@@ -144,11 +146,39 @@ class Game{
         return this.maze;
       }
 
-      movePlayer(dr, dc){
+      movePlayer(speed){
         // TODO: update when doing power pellets / frightened mode / etc
-        let [nr, nc] = [this.player.r+dr, this.player.c+dc];
-        if (this.maze[nr][nc] == 1) return;
+
+        let dx = speed * Math.cos(this.player.orientation);
+        let dy = speed * Math.sin(this.player.orientation);
+
+        let nx = this.player.position.x + dx;
+        let ny = this.player.position.y + dy;
+
+        let nr = Math.round(nx + 0.5);
+        let nc = Math.round(ny + 0.5);
+
+        if (this.maze[nr][nc] == 1) {
+          if (this.maze[nr][this.player.c] != 1) {
+            // can move row but not column
+            dy = 0; 
+            ny = this.player.position.y;
+            nc = this.player.c;
+          }
+          else if (this.maze[this.player.r][nc] != 1) {
+            // can move column but not row
+            dx = 0; 
+            nx = this.player.position.x;
+            nr = this.player.r;
+          }
+          else {
+            // cannot move either
+            return 
+          }
+        }
         
+        this.player.position.x = nx;
+        this.player.position.y = ny;
         this.player.r = nr; 
         this.player.c = nc;
         
@@ -157,10 +187,14 @@ class Game{
           this.player.pellets++;
         }
 
-        this.player.dr = dr;
-        this.player.dc = dc;
+        this.player.dr = Math.round(dx);
+        this.player.dc = Math.round(dy);
       }
 
+      rotatePlayer(angle) {
+        this.player.orientation += angle;
+      }
+ 
       moveGhosts(){
         for (const ghost of this.ghosts){
           const [nextPos, nextDir] = ghost.nextPosition(this.maze);
@@ -279,12 +313,22 @@ const powerPellets = [];
 
 
 // Position the camera
-camera.position.set(19/2-1/2, 25, 25);
-camera.lookAt(19/2-1/2, 0, 0);
+// camera.position.set(19/2-1/2, 25, 25);
+// camera.lookAt(19/2-1/2, 0, 0);
+camera.position.set(19/2-1/2, 15, 20);
+camera.lookAt(19/2-1/2, -10, 0);
 
 // Animate the scene
 const animate = () => {
     requestAnimationFrame(animate);
+
+    // Handle player movement based on key state
+    const speed = 0.03;
+    const angle = 0.05;
+    if (keys.w || keys.ArrowUp) G.movePlayer(speed);
+    if (keys.s || keys.ArrowDown) G.movePlayer(-speed);
+    if (keys.a || keys.ArrowLeft) G.rotatePlayer(angle);
+    if (keys.d || keys.ArrowRight) G.rotatePlayer(-angle);
 
     // Rotate pellets for a dynamic effect
     pellets.forEach(pellet => pellet.rotation.y += 0.03);
@@ -311,7 +355,7 @@ const animate = () => {
     }
 
     // Update positions based on the game state
-    player.position.set(G.player.c, 0.5, G.player.r);
+    player.position.set(G.player.position.y + 0.5, 0, G.player.position.x + 0.5);
     
     G.ghosts.forEach((g, i) => {
         ghosts[i].position.set(g.c, 0.5, g.r);
@@ -320,13 +364,24 @@ const animate = () => {
     renderer.render(scene, camera);
 };
 
-// Temporary controls for debugging
+// Track which keys are currently pressed
+const keys = {
+  ArrowUp: false,
+  ArrowDown: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+  w: false,
+  s: false,
+  a: false,
+  d: false,
+};
+
+// Controls
 window.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowUp') G.movePlayer(-1, 0);
-    if (event.key === 'ArrowDown') G.movePlayer(1, 0);
-    if (event.key === 'ArrowLeft') G.movePlayer(0, -1);
-    if (event.key === 'ArrowRight') G.movePlayer(0, 1);
-    
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = true;
+    }
+
     if (event.key == "s"){
       console.log("Set to scattered mode")
       for (const ghost of G.ghosts){
@@ -353,6 +408,12 @@ window.addEventListener('keydown', (event) => {
 
     G.moveGhosts();
     G.updateGhostTargets();
+});
+
+window.addEventListener('keyup', (event) => {
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = false;
+    }
 });
 
 
