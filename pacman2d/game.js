@@ -90,6 +90,7 @@ class Ghost{
 
 }
 
+
 class Game{
   static maze = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
