@@ -249,6 +249,7 @@ const createSphere = (color, x, y, z) => {
 const player = createSphere(0xffff00, 10, 0.5, 7); // Pac-Man
 scene.add(player);
 
+
 // Ghosts
 const ghosts = [
     createSphere(0xff0000, 15, 0.5, 12), // Red ghost
@@ -259,6 +260,24 @@ const ghosts = [
 ghosts.forEach(ghost => scene.add(ghost));
 
 
+// Function to create pellets
+const createPellet = (x, z, isPowerUp = false) => {
+  const size = isPowerUp ? 0.2 : 0.1; // Bigger for power-up pellets
+  const color = isPowerUp ? 0xffff00 : 0xffffff; // Yellow for power-up pellets
+  const geometry = new THREE.BoxGeometry(size, size, size);
+  const material = new THREE.MeshStandardMaterial({ color });
+  const pellet = new THREE.Mesh(geometry, material);
+  pellet.quaternion.random();
+  pellet.position.set(x, 0.2, z); // Slightly above the floor
+  return pellet;
+};
+
+// Arrays to store pellets and power-up pellets
+const pellets = [];
+const powerPellets = [];
+
+
+
 // Position the camera
 camera.position.set(0, 15, 20);
 camera.lookAt(0, 0, 7);
@@ -266,6 +285,30 @@ camera.lookAt(0, 0, 7);
 // Animate the scene
 const animate = () => {
     requestAnimationFrame(animate);
+
+    // Rotate pellets for a dynamic effect
+    pellets.forEach(pellet => pellet.rotation.y += 0.03);
+    powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
+
+    // Check for pellet consumption
+    for (let i = pellets.length - 1; i >= 0; i--) {
+        const pellet = pellets[i];
+        if (Math.abs(player.position.x - pellet.position.x) < 0.5 &&
+            Math.abs(player.position.z - pellet.position.z) < 0.5) {
+            scene.remove(pellet); // Remove the pellet from the scene
+            pellets.splice(i, 1); // Remove it from the array
+        }
+    }
+
+    for (let i = powerPellets.length - 1; i >= 0; i--) {
+        const powerPellet = powerPellets[i];
+        if (Math.abs(player.position.x - powerPellet.position.x) < 0.5 &&
+            Math.abs(player.position.z - powerPellet.position.z) < 0.5) {
+            scene.remove(powerPellet); // Remove the power-up pellet
+            powerPellets.splice(i, 1);
+            // Add power-up effect here if needed
+        }
+    }
 
     // Update positions based on the game state
     player.position.set(G.player.c, 0.5, G.player.r);
@@ -301,6 +344,22 @@ for (let r = 0; r < maze.length; r++) {
             scene.add(wall);
         }
     }
+}
+
+
+// Generate pellets and add them to the scene
+for (let r = 0; r < maze.length; r++) {
+  for (let c = 0; c < maze[r].length; c++) {
+      if (maze[r][c] === 2) { // Regular pellets
+          const pellet = createPellet(c, r, false);
+          pellets.push(pellet);
+          scene.add(pellet);
+      } else if (G.maze[r][c] === 3) { // Power-up pellets
+          const powerPellet = createPellet(c, r, true);
+          powerPellets.push(powerPellet);
+          scene.add(powerPellet);
+      }
+  }
 }
 
 
