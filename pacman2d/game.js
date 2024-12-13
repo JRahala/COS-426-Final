@@ -187,9 +187,12 @@ class Game{
     G.ghosts[2].tc = (2 * redToPacC) + G.ghosts[0].c;    
 
     // set orange ghost based on proximty
-    
+    const orangeDistance = (this.playerPosition[0] - G.ghosts[3].r) ** 2 + (this.playerPosition[1] - G.ghosts[3].c) ** 2;
+    const redDR = this.playerPosition[0] - G.ghosts[0].r;
+    const redDC = this.playerPosition[1] - G.ghosts[0].c;
+    G.ghosts[3].tr = (2 * redDR) + G.ghosts[0].r;
+    G.ghosts[3].tc = (2 * redDC) + G.ghosts[0].c; 
   }
-
 }
 
 const renderMaze = (G, canvasId) => {
