@@ -2,7 +2,8 @@ import { Transform3 } from "./Transform3.js";
 import { Renderable } from "./Renderable.js";
 import { Player } from "./Player.js";
 import { Game } from "./Game.js";
-import { addHeads } from "./Ghost.js";
+//import { addHeads } from "./Ghost.js";
+import {cubeCluster} from "./Powerup.js";
 
 console.log("Hello world!");
 
@@ -24,7 +25,7 @@ const player = new Player(G, playerTransform);
 G.addPlayer(player);
 
 // Initialize RoomManager
-const roomManager = new RoomManager(G, player, roomTemplate);
+//const roomManager = new RoomManager(G, player, roomTemplate);
 
 // Game loops
 G.initRenderLoop();
@@ -36,5 +37,6 @@ const gridHelper = new THREE.GridHelper(5000, 100);
 G.scene.add(gridHelper);
 
 
-const ghost = addHeads(scene, "./head/head.obj", 0, 0, 0);
-const powerup = Powerup(1, 0x00ff00);
+//const ghost = addHeads(scene, "./head/head.obj", 0, 0, 0);
+const powerup = cubeCluster(1, 0x00ff00);
+G.scene.add(powerup);
