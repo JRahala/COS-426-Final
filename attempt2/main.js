@@ -1,8 +1,8 @@
-<<<<<<< HEAD
 import { Transform3 } from "./Transform3.js";
 import { Renderable } from "./Renderable.js";
 import { Player } from "./Player.js";
 import { Game } from "./Game.js";
+import { addHeads } from "./Ghost.js";
 
 console.log("Hello world!");
 
@@ -34,3 +34,7 @@ G.addPlayer(P);
 
 const gridHelper = new THREE.GridHelper(5000, 100);
 G.scene.add(gridHelper);
+
+
+const ghost = addHeads(scene, "./head/head.obj", 0, 0, 0);
+const powerup = Powerup(1, 0x00ff00);

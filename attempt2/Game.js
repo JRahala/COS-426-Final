@@ -68,7 +68,6 @@ export class Game{
         physicsLoop();
     }
 
-<<<<<<< HEAD
     initControlLoop(){
         const clock = new THREE.Clock();
         const controlLoop = () => {
@@ -77,11 +76,5 @@ export class Game{
             requestAnimationFrame(controlLoop);
         }
         controlLoop();
-=======
-    gameLoop(roomManager) {
-        roomManager.updateRooms();
-        this.player.updateCollisions();
-        requestAnimationFrame(gameLoop);
->>>>>>> c05e72e207c00ee66ac9a74255a8003a36ca8685
     }
 }

@@ -28,24 +28,10 @@ export class Player extends Renderable{
         });
     }
 
-<<<<<<< HEAD
     controlHandler(dt){
         if (this.game.keys["w"]) console.log("W pressed");
         if (this.game.keys["a"]) console.log("A pressed");
         if (this.game.keys["s"]) console.log("S pressed");
         if (this.game.keys["d"]) console.log("D pressed");
     }
-=======
-    updateMovement(dt) {
-        const speed = 10;
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.transform3.rot);
-        if (this.game.keys['w']) this.transform3.pos.addScaledVector(forward, speed * dt);
-        if (this.game.keys['s']) this.transform3.pos.addScaledVector(forward, -speed * dt);
-    
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.transform3.rot);
-        if (this.game.keys['d']) this.transform3.pos.addScaledVector(right, speed * dt);
-        if (this.game.keys['a']) this.transform3.pos.addScaledVector(right, -speed * dt);
-    }
-    
->>>>>>> c05e72e207c00ee66ac9a74255a8003a36ca8685
 }
