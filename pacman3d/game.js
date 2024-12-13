@@ -10,6 +10,9 @@ class Ghost{
     this.position = new THREE.Vector2(r, c);
     this.orientation = 0;
 
+    this.nextPos = new THREE.Vector2(r, c);
+    this.nextDir = new THREE.Vector2(dr, dc);
+
     this.state = 0; // 0 = scatter, 1 = chase, 2 = frightened
     // scatter target tiles
     this.str = str;
@@ -203,22 +206,26 @@ class Game{
  
       moveGhosts(speed){
         for (const ghost of this.ghosts){
-          const [nextPos, nextDir] = ghost.nextPosition(this.maze);
 
           // move a little bit toward the next pos
-          ghost.position.x = ghost.position.x + speed * (nextPos[0] - ghost.r);
-          ghost.position.y = ghost.position.y + speed * (nextPos[1] - ghost.c);
+          ghost.position.x = ghost.position.x + speed * (ghost.nextPos.x - ghost.r);
+          ghost.position.y = ghost.position.y + speed * (ghost.nextPos.y - ghost.c);
 
           // when done moving to the correct next pos
-          if (Math.abs(ghost.position.x - nextPos[0]) < speed && Math.abs(ghost.position.y - nextPos[1]) < speed){
+          if (Math.abs(ghost.position.x - ghost.nextPos.x) < speed && Math.abs(ghost.position.y - ghost.nextPos.y) < speed){
 
             ghost.r = Math.round(ghost.position.x); 
             ghost.c = Math.round(ghost.position.y);
   
-            ghost.dr = nextDir[0]; 
-            ghost.dc = nextDir[1];
+            ghost.dr = ghost.nextDir.x; 
+            ghost.dc = ghost.nextDir.y;
 
-            ghost.orientation = Math.atan2(nextDir[1], nextDir[0]); 
+            ghost.orientation = Math.atan2(ghost.nextDir.x, ghost.nextDir.y); 
+
+            // update next pos
+            const [nextPos, nextDir] = ghost.nextPosition(this.maze);
+            ghost.nextPos.x = nextPos[0]; ghost.nextPos.y = nextPos[1]; 
+            ghost.nextDir.x = nextDir[0]; ghost.nextDir.y = nextDir[1];
           }
         }
       }
