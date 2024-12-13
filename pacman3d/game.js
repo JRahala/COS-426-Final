@@ -152,10 +152,16 @@ class Game{
         this.score = 0;
         this.isOver = false
 
+        this.resetGame();
+
+        this.ghostState = 0;
+        this.currentStateTime = 0;
+        this.ghostSwitchTimer = setInterval(() => {
+          this.switchGhostStates();
+        }, 1000);
+
         this.pellets = [];
         this.powerPellets = [];
-
-        this.resetGame();
       }
 
       resetGame(){
@@ -168,6 +174,8 @@ class Game{
         this.ghosts = [redGhost, pinkGhost, blueGhost, orangeGhost];
         this.maze = this.resetMaze();
         this.isOver = false;
+
+        this.setGhostStates(0);
 
         this.resetScore();
       }
@@ -323,8 +331,30 @@ class Game{
                 scene.remove(powerPellet); 
                 this.powerPellets.splice(i, 1);
                 this.updateScore(50);
+
+                // changed to frightened state
+                this.setGhostStates(2);
             }
         }
+      }
+
+      switchGhostStates() {
+        this.currentStateTime++;
+        const modeDuration = [7, 20, 6];
+        if (this.currentStateTime >= modeDuration[this.ghostState]) {
+            const state = Math.max(0, 1 - this.ghostState); 
+            this.setGhostStates(state);
+        }
+      }
+
+      setGhostStates(state){
+        this.currentStateTime = 0;
+        this.ghostState = state;
+        for (const ghost of this.ghosts){
+          ghost.state = state;
+        }
+        const modeElement = document.getElementById("mode-display");
+        modeElement.textContent = `Mode: ${state}`;
       }
 
       updateScore(amount){
@@ -483,30 +513,6 @@ const keys = {
 window.addEventListener('keydown', (event) => {
     if (keys.hasOwnProperty(event.key)) {
         keys[event.key] = true;
-    }
-
-    if (event.key == "s"){
-      console.log("Set to scattered mode")
-      for (const ghost of G.ghosts){
-        ghost.forcedReversal();
-        ghost.state = 0;
-      }
-    }
-    
-    if (event.key == "c"){
-      console.log("Set to chase mode")
-      for (const ghost of G.ghosts){
-        ghost.forcedReversal();
-        ghost.state = 1;
-      }
-    }
-
-    if (event.key == "f"){
-      console.log("Set to frightened mode")
-      for (const ghost of G.ghosts){
-        ghost.forcedReversal();
-        ghost.state = 2;
-      }
     }
 
     if (event.key === 'v') { // Press 'V' to toggle view mode
