@@ -279,8 +279,8 @@ const powerPellets = [];
 
 
 // Position the camera
-camera.position.set(0, 15, 20);
-camera.lookAt(0, 0, 7);
+camera.position.set(19/2-1/2, 25, 25);
+camera.lookAt(19/2-1/2, 0, 0);
 
 // Animate the scene
 const animate = () => {
@@ -326,6 +326,30 @@ window.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowDown') G.movePlayer(1, 0);
     if (event.key === 'ArrowLeft') G.movePlayer(0, -1);
     if (event.key === 'ArrowRight') G.movePlayer(0, 1);
+    
+    if (event.key == "s"){
+      console.log("Set to scattered mode")
+      for (const ghost of G.ghosts){
+        ghost.forcedReversal();
+        ghost.state = 0;
+      }
+    }
+    
+    if (event.key == "c"){
+      console.log("Set to chase mode")
+      for (const ghost of G.ghosts){
+        ghost.forcedReversal();
+        ghost.state = 1;
+      }
+    }
+
+    if (event.key == "f"){
+      console.log("Set to frightened mode")
+      for (const ghost of G.ghosts){
+        ghost.forcedReversal();
+        ghost.state = 2;
+      }
+    }
 
     G.moveGhosts();
     G.updateGhostTargets();
