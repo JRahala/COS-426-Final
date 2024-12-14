@@ -3,7 +3,7 @@ import { Renderable } from "./Renderable.js";
 import { Player } from "./Player.js";
 import { Game } from "./Game.js";
 import {addHeads} from "./Ghost.js";
-
+import {cubeCluster} from "./Powerup.js"
 console.log("Hello world!");
 
 const G = new Game();
