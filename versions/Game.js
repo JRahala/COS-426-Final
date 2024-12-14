@@ -49,7 +49,7 @@ export class Game{
         // Temporarily remove the ghost
         // ghost.mesh.visible = false;
         // ghost.state = 3; // Custom state for "defeated"
-        ghostsEaten++;
+        this.ghostsEaten++;
         this.updateScore(200 * Math.pow(2, this.ghostsEaten - 1));
 
         // Reset the ghost after 5 seconds
