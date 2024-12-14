@@ -47,22 +47,22 @@ export class Game{
     defeatGhost(ghost) {
         console.log(`Ghost defeated: ${ghost.color.toString(16)}`);
         // Temporarily remove the ghost
-        ghost.mesh.visible = false;
-        ghost.state = 3; // Custom state for "defeated"
+        // ghost.mesh.visible = false;
+        // ghost.state = 3; // Custom state for "defeated"
         ghostsEaten++;
         this.updateScore(200 * Math.pow(2, this.ghostsEaten - 1));
 
         // Reset the ghost after 5 seconds
-        setTimeout(() => {
-            ghost.mesh.visible = true;
-            ghost.state = this.currentMode; // Restore its previous mode
-            ghost.r = ghost.str; // Reset to starting position
-            ghost.c = ghost.stc;
-            ghost.r_ = ghost.str;
-            ghost.c_ = ghost.stc;
-            ghost.setTarget(ghost.tr, ghost.tc); // Reset its target
-            console.log(`Ghost respawned: ${ghost.color.toString(16)}`);
-        }, 5000);
+        // setTimeout(() => {
+            // ghost.mesh.visible = true;
+        ghost.state = this.currentMode; // Restore its previous mode
+        ghost.r = ghost.str; // Reset to starting position
+        ghost.c = ghost.stc;
+        ghost.r_ = ghost.str;
+        ghost.c_ = ghost.stc;
+        ghost.setTarget(ghost.tr, ghost.tc); // Reset its target
+        console.log(`Ghost respawned: ${ghost.color.toString(16)}`);
+        // }, 5000);
     }
     
     checkCollision() {
