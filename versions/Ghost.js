@@ -212,7 +212,7 @@ frightened() {
         loader.load(
             './models/head.obj',
             (obj) => {
-                const meshScaling = 0.1;
+                const meshScaling = 0.05;
                 obj.scale.set(meshScaling, meshScaling, meshScaling);
                 obj.position.set(0, 0, 0);
                 obj.rotation.x = -Math.PI / 2;
