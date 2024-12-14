@@ -302,8 +302,7 @@ class Game{
                 // pacman eats ghost
                 ghost.reset()
                 this.ghostsEaten++;
-                this.updateScore(200 * this.ghostsEaten);
-                this.setGhostStates(0);
+                this.updateScore(Math.max(1600, 200 * this.ghostsEaten));
               } else {
                 // ghost kills pacman
                 document.getElementById("death-message").style.display = "flex";
@@ -391,6 +390,7 @@ class Game{
         const modeElement = document.getElementById("mode-display");
         modeElement.textContent = `Mode: ${state}`;
       }
+
 
       updateScore(amount){
         this.score += amount 
@@ -486,18 +486,17 @@ const animate = () => {
     if (G.isOver) {
       return;
     }
-
-    const movementSpeed = 0.03;
-    const rotationSpeed = 0.03;
+    const pacmanSpeed = G.ghostState == 2 ? 0.033 : 0.027;
+    const ghostSpeed = G.ghostState == 2 ? 0.03 : 0.025;
 
     // Handle player movement based on key state
-    if (keys.w || keys.ArrowUp) G.movePlayer(movementSpeed);
-    if (keys.s || keys.ArrowDown) G.movePlayer(-movementSpeed);
-    if (keys.a || keys.ArrowLeft) G.rotatePlayer(rotationSpeed);
-    if (keys.d || keys.ArrowRight) G.rotatePlayer(-rotationSpeed);
+    if (keys.w || keys.ArrowUp) G.movePlayer(pacmanSpeed);
+    if (keys.s || keys.ArrowDown) G.movePlayer(-pacmanSpeed);
+    if (keys.a || keys.ArrowLeft) G.rotatePlayer(pacmanSpeed);
+    if (keys.d || keys.ArrowRight) G.rotatePlayer(-pacmanSpeed);
 
     // Move the ghosts
-    G.moveGhosts(movementSpeed);
+    G.moveGhosts(ghostSpeed);
 
     // Update the ghost targets
     G.updateGhostTargets();
@@ -524,6 +523,8 @@ const animate = () => {
         const angle = Math.PI + G.player.orientation;
         camera.position.set(G.player.position.y + 2 * Math.sin(angle), 1, G.player.position.x + 2 * Math.cos(angle));
         camera.lookAt(G.player.position.y, 0, G.player.position.x);
+        camera.fov = G.ghostState == 2 ? 90 : 75; // New field of view in degrees
+        camera.updateProjectionMatrix();
     } else {
         camera.position.set(19 / 2 - 1 / 2, 15, 20);
         camera.lookAt(19 / 2 - 1 / 2, -10, 0);
