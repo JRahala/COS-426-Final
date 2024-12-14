@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee+Inline&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vanilla Three.js</title>
     <style>
+        *{
+            font-family: "Bungee Inline", sans-serif;
+        }
         body {
             margin: 0;
             overflow: hidden; /* Prevent scrollbars */
@@ -54,6 +60,6 @@
     </div>
     <!-- The canvas is auto-injected by Three.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
-    <script src="./game.js"></script>
+    <script type="module" src="./game.js"></script>
 </body>
 </html>
