@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 export class Player {
     static rotSpeed = 2;
-    static moveSpeed = 2;
-    static smoothingFactor = 10; // Higher value = smoother transition
+    static moveSpeed = 4;
+    static smoothingFactor = 8; // Higher value = smoother transition
 
     constructor(game, r, c, dir = 0) {
         this.game = game;
@@ -19,6 +19,15 @@ export class Player {
         // The direction player is pointed in (in radians)
         this.dir = dir;
 
+        // Set position and orientation
+        this.position = new THREE.Vector2(r, c);
+        this.orientation = 0;
+
+        // Mouth animation properties
+        this.mouthAngle = 0; // Current mouth angle
+        this.mouthSpeed = 2; // Speed of mouth opening/closing
+        this.mouthDirection = 1; // Direction of mouth animation (1 = opening, -1 = closing)
+        
         // Target positions for smooth interpolation
         this.target_r_ = r;
         this.target_c_ = c;
@@ -41,6 +50,45 @@ export class Player {
     gridCell(r, c) {
         return [Math.round(r), Math.round(c)];
     }
+
+
+    createPacmanGeometry() {
+        // Create a base sphere
+        const radius = 0.3;
+        const widthSegments = 32;
+        const heightSegments = 32;
+    
+        const sphereGeometry = new THREE.SphereGeometry(
+            radius,
+            widthSegments,
+            heightSegments,
+            this.mouthAngle, // Start angle for mouth
+            2 * Math.PI - this.mouthAngle * 2, // Angle to cut for the mouth
+            0, // Vertical angle for top of mouth
+            Math.PI // Vertical angle for bottom of mouth
+        );
+        sphereGeometry.rotateX(Math.PI / 2);
+        return sphereGeometry;
+    }
+    
+
+    updateMouthAnimation(dt) {
+        // Update mouth angle
+        this.mouthAngle += this.mouthDirection * this.mouthSpeed * dt;
+        if (this.mouthAngle >= Math.PI / 6) {
+            this.mouthAngle = Math.PI / 6;
+            this.mouthDirection = -1; // Start closing
+        } else if (this.mouthAngle <= 0) {
+            this.mouthAngle = 0;
+            this.mouthDirection = 1; // Start opening
+        }
+
+        // Update geometry
+        this.geometry = this.createPacmanGeometry();
+        this.mesh.geometry.dispose(); // Dispose of the old geometry
+        this.mesh.geometry = this.geometry;
+    }
+
 
     rotateLeft() {
         // Rotate 90 degrees counter-clockwise

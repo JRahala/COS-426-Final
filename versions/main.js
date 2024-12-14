@@ -13,16 +13,10 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-let firstPersonView = false; // Camera state toggle
-const restartButton = document.getElementById("restart-button");
-
-if (restartButton) {
-    restartButton.addEventListener("click", () => {
-        location.reload(); // Reload the page to reset the game
-    });
-} else {
-    console.warn("Restart button not found in the DOM.");
-}
+let firstPersonView = true; // Camera state toggle
+document.getElementById("restart-button").addEventListener("click", () => {
+    location.reload(); // Reload the page to reset the game
+});
 
 
 // Lighting
@@ -121,6 +115,36 @@ composer.addPass(renderPass);
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1, 0.01, 0.1);
 composer.addPass(bloomPass);
 
+// Track which keys are currently pressed
+const keys = {
+  ArrowUp: false,
+  ArrowDown: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+  w: false,
+  s: false,
+  a: false,
+  d: false,
+};
+
+// Controls
+window.addEventListener('keydown', (event) => {
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = true;
+    }
+
+    if (event.key === 'v') { // Press 'V' to toggle view mode
+      console.log(`View mode: ${isFirstPersonView ? 'First-Person' : 'Overhead'}`);
+      isFirstPersonView = !isFirstPersonView;
+    }
+});
+
+window.addEventListener('keyup', (event) => {
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = false;
+    }
+});
+
 // Animate the scene
 const animate = () => {
     if (game.isGameOver) {
@@ -134,8 +158,16 @@ const animate = () => {
     game.checkCollision();
 
     // Update player position
-    game.player.updatePosition(dt);
-    game.player.mesh.position.set(game.player.c_, 0.5, game.player.r_);
+    const speed = dt * 2.5;
+
+    // Handle player movement based on key state
+    if (keys.w || keys.ArrowUp) game.movePlayer(speed);
+    if (keys.s || keys.ArrowDown) game.movePlayer(-speed);
+    if (keys.a || keys.ArrowLeft) game.rotatePlayer(speed);
+    if (keys.d || keys.ArrowRight) game.rotatePlayer(-speed);
+
+    // Update positions based on the game state
+    game.player.mesh.position.set(game.player.position.y, 0, game.player.position.x);
 
     // Update ghost positions and behaviors
     game.updateGhostModes(dt);
@@ -150,17 +182,16 @@ const animate = () => {
             ghost.walking = true;
         }
         ghost.walk(dt);
-        ghost.mesh.position.set(ghost.c_, 0.5, ghost.r_);
+        ghost.mesh.position.set(ghost.c_, 0, ghost.r_);
     });
 
     // Camera positioning
     if (firstPersonView) {
-        camera.position.set(
-            game.player.mesh.position.x - Math.cos(game.player.dir) * 0.5,
-            1, // Slightly above Pac-Man
-            game.player.mesh.position.z - Math.sin(game.player.dir) * 0.5
-        );
-        camera.lookAt(game.player.mesh.position);
+        const angle = Math.PI + game.player.orientation;
+        camera.position.set(game.player.position.y + 2 * Math.sin(angle), 1, game.player.position.x + 2 * Math.cos(angle));
+        camera.lookAt(game.player.position.y, 0, game.player.position.x);
+        camera.fov = game.ghostState == 2 ? 90 : 75; // New field of view in degrees
+        camera.updateProjectionMatrix();
     } else {
         // Default top-down view
         camera.position.set(19 / 2 - 0.5, 25, 20);
@@ -178,6 +209,7 @@ const animate = () => {
             Math.abs(game.player.mesh.position.z - pellet.position.z) < 0.5) {
             scene.remove(pellet);
             pellets.splice(i, 1);
+            game.updateScore(10);
         }
     }
 
@@ -187,7 +219,8 @@ const animate = () => {
             Math.abs(game.player.mesh.position.z - powerPellet.position.z) < 0.5) {
             scene.remove(powerPellet);
             powerPellets.splice(i, 1);
-    
+            game.updateScore(50);
+            
             // Activate frightened mode for all ghosts
             console.log("Power pellet collected! Ghosts frightened.");
             game.ghosts.forEach((ghost) => (ghost.state = 2));
@@ -217,31 +250,10 @@ window.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowLeft') game.player.rotateLeft();
     if (event.key === 'ArrowRight') game.player.rotateRight();
 
-    if (event.key === 's') {
-        console.log("Scatter mode activated");
-        game.ghosts.forEach((ghost) => {
-            ghost.state = 0; 
-            ghost.scatter(); 
-        });
-    }
     if (game.isGameOver) {
         console.log("Animation stopped: Game Over.");
         return; // Stop animation if the game is over
     }
-    if (event.key === 'c') {
-        console.log("Chase mode activated");
-        game.ghosts.forEach((ghost) => {
-            ghost.state = 1; // Chase state
-        });
-    }
-
-    if (event.key === 'f') {
-        console.log("Frightened mode activated");
-        game.ghosts.forEach((ghost) => {
-            ghost.state = 2; // Frightened state
-        });
-    }
-
     if (event.key === 'v') {
         firstPersonView = !firstPersonView;
         console.log(`Camera mode: ${firstPersonView ? "First-Person" : "Default"}`);

@@ -9,10 +9,6 @@ export class Ghost {
         this.r = r;
         this.c = c;
 
-        // World coordinates
-        this.r_ = r;
-        this.c_ = c;
-
         // The static square they want to move to
         this.str = str;
         this.stc = stc;
@@ -212,7 +208,7 @@ frightened() {
         loader.load(
             './models/head.obj',
             (obj) => {
-                const meshScaling = 0.1;
+                const meshScaling = 0.05;
                 obj.scale.set(meshScaling, meshScaling, meshScaling);
                 obj.position.set(0, 0, 0);
                 obj.rotation.x = -Math.PI / 2;
