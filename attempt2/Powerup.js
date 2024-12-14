@@ -14,6 +14,7 @@ export class  cubeCluster{
         this.group.add(lCube);
         this.group.add(rCube);
         this.cubes = [centerCube, lCube, rCube];
+        this.group.position.set(0,0,0);
         this.floatDir = 0;
         this.miny = 1;
         this.maxy = 1;

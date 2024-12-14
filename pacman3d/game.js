@@ -1,6 +1,11 @@
+<<<<<<< HEAD
+import {Ghost} from "./Ghost.js"
+/*class Ghost{
+=======
 // import {OBJLoader} from './loaders/OBJLoader.js';
 
 class Ghost{
+>>>>>>> 313ad8cef194648859ac540309a94bbfc96d24df
   constructor(r, c, dr, dc, tr, tc, str, stc){
     this.r = r;
     this.c = c;
@@ -117,6 +122,7 @@ isValidMove(r, c, maze) {
   //   }
   //   );
 }
+*/
 
 //  // want head to float
 //  float(){
@@ -194,10 +200,11 @@ class Game{
       }
 
       resetGame(){
-        const redGhost = new Ghost(12,15,-1,0,3,7,-10,14);
-        const pinkGhost = new Ghost(7,1,-1,0,3,7,-10,3);
-        const blueGhost = new Ghost(10,1,-1,0,0,0,20,1);
-        const orangeGhost = new Ghost(14,15,-1,0,0,0,20,15);
+        const redGhost = new Ghost(this.scene,'./models/head.obj',12,15,-1,0,3,7,-10,14,0xff0000);
+        const pinkGhost = new Ghost(this.scene,'./models/head.obj',7,1,-1,0,3,7,-10,3,0xffb6c1);
+        const blueGhost = new Ghost(this.scene,'./models/head.obj',10,1,-1,0,0,0,20,1,0x0000ff);
+        const orangeGhost = new Ghost(this.scene,'./models/head.obj',14,15,-1,0,0,0,20,15,0xffa500);
+       
 
         this.player = new Player(7, 10, 1, 0);
         this.ghosts = [redGhost, pinkGhost, blueGhost, orangeGhost];
@@ -487,8 +494,22 @@ const createWall = (x, y, z) => {
     const wallGeometry = new THREE.BoxGeometry(1, 1, 1);
     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.position.set(x, y, z);
-    return wall;
+    // Thin white wireframe border for the wall
+    const borderGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01, 1.01, 1.01));
+    const borderMaterial = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        linewidth: 1,   
+    });
+    const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+    // Group both the wall and border together
+    const wallGroup = new THREE.Group();
+    wallGroup.add(wall);
+    wallGroup.add(border);
+
+    // Set the position of the group
+    wallGroup.position.set(x, y, z);
+
+    return wallGroup;
 };
 
 const size = 0.4;
