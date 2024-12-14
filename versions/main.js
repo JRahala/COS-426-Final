@@ -159,6 +159,7 @@ const animate = () => {
 
     // Update player position
     const speed = dt * 2.5;
+    const ghostSpeed = dt * 0.65;
 
     // Handle player movement based on key state
     if (keys.w || keys.ArrowUp) game.movePlayer(speed);
@@ -181,7 +182,7 @@ const animate = () => {
             ghost.setDirection(direction[0], direction[1]);
             ghost.walking = true;
         }
-        ghost.walk(dt);
+        ghost.walk(ghostSpeed);
         ghost.mesh.position.set(ghost.c_, 0, ghost.r_);
     });
 
@@ -190,7 +191,7 @@ const animate = () => {
         const angle = Math.PI + game.player.orientation;
         camera.position.set(game.player.position.y + 2 * Math.sin(angle), 1, game.player.position.x + 2 * Math.cos(angle));
         camera.lookAt(game.player.position.y, 0, game.player.position.x);
-        camera.fov = game.ghostState == 2 ? 90 : 75; // New field of view in degrees
+        camera.fov = game.ghosts[0].state == 2 ? 90 : 75; // New field of view in degrees
         camera.updateProjectionMatrix();
     } else {
         // Default top-down view

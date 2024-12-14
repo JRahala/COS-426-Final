@@ -32,6 +32,7 @@ export class Game{
         this.modeTimer = 0; // General timer for tracking state transitions
         this.currentMode = 1;
         this.isGameOver = false;
+        this.ghostsEaten = 0;
         this.score = 0;
     }
 
@@ -48,7 +49,8 @@ export class Game{
         // Temporarily remove the ghost
         ghost.mesh.visible = false;
         ghost.state = 3; // Custom state for "defeated"
-        this.updateScore(500);
+        ghostsEaten++;
+        this.updateScore(200 * Math.pow(2, ghostsEaten - 1));
 
         // Reset the ghost after 5 seconds
         setTimeout(() => {
@@ -151,8 +153,6 @@ export class Game{
         }
     }
     
-
-
     updateGhostModes(dt) {
         this.modeTimer += dt;
 

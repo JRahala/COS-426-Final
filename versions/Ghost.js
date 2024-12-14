@@ -82,80 +82,80 @@ export class Ghost {
     // Set target to Pac-Man's position
     const pacman = this.game.player;
     this.setTarget(pacman.r, pacman.c);
-}
-
-frightened() {
-    if (this.state !== 2) return; // Only frightened in frightened mode
-
-    const moves = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-    let bestDirection = [0, 0];
-    let farthestDistance = -Infinity;
-
-    // Evaluate all possible moves and choose the farthest from Pac-Man
-    moves.forEach((move) => {
-        const newR = this.r + move[0];
-        const newC = this.c + move[1];
-
-        if (!this.game.isWall(newR, newC)) {
-            const distance = (newR - this.game.player.r) ** 2 + (newC - this.game.player.c) ** 2;
-            if (distance > farthestDistance) {
-                farthestDistance = distance;
-                bestDirection = move;
-            }
-        }
-    });
-
-    this.setTarget(this.r + bestDirection[0], this.c + bestDirection[1]);
-}
-
-    nextPosition() {
-    const moves = new Map();
-
-    // Helper function to check if a move is valid
-    const isValidMove = (r, c) =>
-        r >= 0 &&
-        c >= 0 &&
-        r < this.game.maze.length &&
-        c < this.game.maze[0].length &&
-        this.game.maze[r][c] !== 1;
-
-    // Populate valid moves
-    moves.set([0, 1].toString(), isValidMove(this.r, this.c + 1)); // Right
-    moves.set([1, 0].toString(), isValidMove(this.r + 1, this.c)); // Down
-    moves.set([0, -1].toString(), isValidMove(this.r, this.c - 1)); // Left
-    moves.set([-1, 0].toString(), isValidMove(this.r - 1, this.c)); // Up
-
-    let bestDirection = [0, 0];
-    let bestDistance = Infinity;
-    let hasValidMove = false;
-
-    // Evaluate all possible moves
-    [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach((key) => {
-        if (moves.get(key.toString()) && !(key[0] === -this.dr && key[1] === -this.dc)) {
-            hasValidMove = true;
-            const tempDist = (key[0] + this.r - this.tr) ** 2 + (key[1] + this.c - this.tc) ** 2;
-            if (tempDist < bestDistance) {
-                bestDirection = key;
-                bestDistance = tempDist;
-            }
-        }
-    });
-
-    // If no valid move exists, choose a random direction
-    if (!hasValidMove) {
-        console.warn(`Ghost @ (${this.r}, ${this.c}) is stuck. Choosing random move.`);
-        const validMoves = Array.from(moves.entries()).filter(([_, valid]) => valid);
-        if (validMoves.length > 0) {
-            const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-            bestDirection = randomMove[0].split(',').map(Number);
-        } else {
-            console.error(`Ghost @ (${this.r}, ${this.c}) has no valid moves.`);
-            return [[this.r, this.c], [0, 0]];
-        }
     }
 
-    return [[bestDirection[0] + this.r, bestDirection[1] + this.c], bestDirection];
-}
+    frightened() {
+        if (this.state !== 2) return; // Only frightened in frightened mode
+
+        const moves = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+        let bestDirection = [0, 0];
+        let farthestDistance = -Infinity;
+
+        // Evaluate all possible moves and choose the farthest from Pac-Man
+        moves.forEach((move) => {
+            const newR = this.r + move[0];
+            const newC = this.c + move[1];
+
+            if (!this.game.isWall(newR, newC)) {
+                const distance = (newR - this.game.player.r) ** 2 + (newC - this.game.player.c) ** 2;
+                if (distance > farthestDistance) {
+                    farthestDistance = distance;
+                    bestDirection = move;
+                }
+            }
+        });
+
+        this.setTarget(this.r + bestDirection[0], this.c + bestDirection[1]);
+    }
+
+    nextPosition() {
+        const moves = new Map();
+
+        // Helper function to check if a move is valid
+        const isValidMove = (r, c) =>
+            r >= 0 &&
+            c >= 0 &&
+            r < this.game.maze.length &&
+            c < this.game.maze[0].length &&
+            this.game.maze[r][c] !== 1;
+
+        // Populate valid moves
+        moves.set([0, 1].toString(), isValidMove(this.r, this.c + 1)); // Right
+        moves.set([1, 0].toString(), isValidMove(this.r + 1, this.c)); // Down
+        moves.set([0, -1].toString(), isValidMove(this.r, this.c - 1)); // Left
+        moves.set([-1, 0].toString(), isValidMove(this.r - 1, this.c)); // Up
+
+        let bestDirection = [0, 0];
+        let bestDistance = Infinity;
+        let hasValidMove = false;
+
+        // Evaluate all possible moves
+        [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach((key) => {
+            if (moves.get(key.toString()) && !(key[0] === -this.dr && key[1] === -this.dc)) {
+                hasValidMove = true;
+                const tempDist = (key[0] + this.r - this.tr) ** 2 + (key[1] + this.c - this.tc) ** 2;
+                if (tempDist < bestDistance) {
+                    bestDirection = key;
+                    bestDistance = tempDist;
+                }
+            }
+        });
+
+        // If no valid move exists, choose a random direction
+        if (!hasValidMove) {
+            console.warn(`Ghost @ (${this.r}, ${this.c}) is stuck. Choosing random move.`);
+            const validMoves = Array.from(moves.entries()).filter(([_, valid]) => valid);
+            if (validMoves.length > 0) {
+                const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                bestDirection = randomMove[0].split(',').map(Number);
+            } else {
+                console.error(`Ghost @ (${this.r}, ${this.c}) has no valid moves.`);
+                return [[this.r, this.c], [0, 0]];
+            }
+        }
+
+        return [[bestDirection[0] + this.r, bestDirection[1] + this.c], bestDirection];
+    }
 
 
     walk(dt) {
