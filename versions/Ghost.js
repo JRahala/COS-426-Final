@@ -108,6 +108,21 @@ export class Ghost {
         this.setTarget(this.r + bestDirection[0], this.c + bestDirection[1]);
     }
 
+    setColor(color){
+        this.color = color;
+        this.mesh.traverse((child) => {
+            if (child.isMesh) {
+                child.material = new THREE.MeshStandardMaterial({
+                    color: this.color,
+                    emissive: this.color,
+                    emissiveIntensity: 0.8,
+                    roughness: 0.5,
+                    metalness: 0.2,
+                });
+            }
+        });
+    }
+
     nextPosition() {
         const moves = new Map();
 

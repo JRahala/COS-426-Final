@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glowing Ball with Stronger Bloom Effect</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+</head>
+<body style="margin: 0; overflow: hidden;">
+
+<script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Glowing ball creation with high emissive intensity
+    const geometry = new THREE.SphereGeometry(1, 32, 32);
+    const material = new THREE.MeshPhysicalMaterial({
+        color: 0xff0000,  // Red color
+        emissive: 0xff0000,  // Red glow
+        emissiveIntensity: 10,  // Strong emissive intensity
+        metalness: 0.1,
+        roughness: 0.5,
+        clearcoat: 1,  // Added clearcoat for extra reflection
+        clearcoatRoughness: 0
+    });
+    const sphere = new THREE.Mesh(geometry, material);
+    scene.add(sphere);
+
+    // Add ground plane to see reflection of the glow
+    const planeGeometry = new THREE.PlaneGeometry(10, 10);
+    const planeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x808080,  // Grey ground
+        roughness: 0.8,    // Rough texture
+        metalness: 0.5,    // Slightly reflective
+    });
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -1;
+    scene.add(plane);
+
+    // Lighting setup: Ambient + PointLight to enhance glow
+    const ambientLight = new THREE.AmbientLight(0x404040);  // Soft ambient light
+    scene.add(ambientLight);
+    const pointLight = new THREE.PointLight(0xffffff, 2, 10);  // Bright point light to illuminate scene
+    pointLight.position.set(0, 3, 0);
+    scene.add(pointLight);
+
+    // Camera position
+    camera.position.z = 5;
+
+    // Post-processing setup
+    const composer = new THREE.EffectComposer(renderer);
+    const renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    // UnrealBloomPass: Increased strength and radius for stronger bloom
+    const bloomPass = new THREE.UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        3.5,  // Increased bloom strength
+        1.0,  // Increased bloom radius
+        0.9   // Increased bloom threshold
+    );
+    composer.addPass(bloomPass);
+
+    // Final pass to copy the result to the screen
+    const copyPass = new THREE.ShaderPass(THREE.CopyShader);
+    copyPass.renderToScreen = true;
+    composer.addPass(copyPass);
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotate the sphere to show glow effect
+        sphere.rotation.x += 0.01;
+        sphere.rotation.y += 0.01;
+
+        // Render the scene with bloom effect
+        composer.render(scene);
+    }
+
+    animate();
+
+    // Handle window resizing
+    window.addEventListener('resize', () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        composer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+
+</body>
+</html>
