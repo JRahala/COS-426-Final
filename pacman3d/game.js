@@ -44,71 +44,56 @@ class Ghost{
       this.nextDir = new THREE.Vector2(this.dr, this.dc);
   }
 
-  frightenedChoice(moves){
-    // choose a random choice that is available
-    const prefs = [[0,1],[1,0],[0,-1],[-1,0]];
-    let index = Math.floor(Math.random() * 4 - 0.0001);
-    for (let i=0; i<4; i++){
-      let j = (index+i) % 4;
-      // make sure its not opposite - this may cause a glitch if the reversal happens at the exact time before - pray this doesnt happen
-      if (moves.get(prefs[j].toString()) && !(prefs[j][0] == -this.dr && prefs[j][1] == -this.dc)) return [[prefs[j][0]+this.r, prefs[j][1]+this.c], prefs[j]];
-    }
-    return [[this.r,this.c],[0,0]];
-  }
+  frightenedChoice(moves) {
+    const prefs = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // Directions: right, down, left, up
+    const validMoves = prefs.filter(dir => moves.get(dir.toString()));
 
-  // return new position and direction of this movement
-  nextPosition(maze){
+    if (validMoves.length === 0) {
+        return [[this.r, this.c], [0, 0]]; // Stay in place if no valid moves
+    }
+
+    let index = Math.floor(Math.random() * validMoves.length);
+    return [[validMoves[index][0] + this.r, validMoves[index][1] + this.c], validMoves[index]];
+}
+
+
+  nextPosition(maze) {
     const moves = new Map();
-    // THE ORDER OF THE BELOW IS IMPORTANT ELSE WE GET ZIG-ZAG BEHAVIOUR (NOW SET TO RDLU) MAKE SURE SAME FOR FOREACH LATER
-    // This also defines the order we iterate over the keys !!!!!! MAKE SURE THIS IS CONSISTENT WHEN ITERATION ELSE CAN GET INFINITE BACK AND FORTH WITHOUT PREFERENCE
-    moves.set([0,1].toString(), maze[this.r][this.c+1] != 1);
-    moves.set([1,0].toString(), maze[this.r+1][this.c] != 1);
-    moves.set([0,-1].toString(), maze[this.r][this.c-1] != 1);
-    moves.set([-1,0].toString(), maze[this.r-1][this.c] != 1);
 
-    // if frightened make random choice
-    if (this.state == 2){
-      return this.frightenedChoice(moves);
+    // Define valid moves based on the maze
+    moves.set([0, 1].toString(), this.isValidMove(this.r, this.c + 1, maze)); // Right
+    moves.set([1, 0].toString(), this.isValidMove(this.r + 1, this.c, maze)); // Down
+    moves.set([0, -1].toString(), this.isValidMove(this.r, this.c - 1, maze)); // Left
+    moves.set([-1, 0].toString(), this.isValidMove(this.r - 1, this.c, maze)); // Up
+
+    if (this.state === 2) {
+        return this.frightenedChoice(moves); // Random move when frightened
     }
 
-    //console.log("MOVE DOWN", moves.get([1,0].toString()));
-    //console.log("MOVE UP", moves.get([-1,0].toString()));
-    //console.log("MOVE RIGHT", moves.get([0,1].toString()));
-    //console.log("MOVE LEFT", moves.get([0,-1].toString()));
-    
-    // if either can't move forward
-    // or can move orthogonal, reconsider choices
-    if (
-      !moves.get([this.dr, this.dc].toString()) || 
-      (this.dr == 0 && (moves.get([1,0].toString()) || moves.get([-1,0].toString()))) || 
-      (this.dc == 0 && (moves.get([0,1].toString()) || moves.get([0,-1].toString())))
-    ){
-      // go over all choices and choose one that takes you closest to target
-      let bestDirection = [0,0];
-      let bestDistance = 1e10;
-      
-      // FOR NOW THIS USES MANHATTAN DISTANCE, EDIT TO EUCLIDEAN IF WE WANT LATER - This is bad think about target above and going right vs down is the same
-      [[0,1],[1,0],[0,-1],[-1,0]].forEach((key) => {
-        // only non-wall moves and no direct backwards
-        if (moves.get(key.toString()) && !(key[0] == -this.dr && key[1] == -this.dc)){
-          // edit distance based on state
-          let tempDist = 1e9;
-          if (this.state == 0) tempDist = (key[0]+this.r-this.str)**2 + (key[1]+this.c-this.stc)**2;
-          if (this.state == 1) tempDist = (key[0]+this.r-this.tr)**2 + (key[1]+this.c-this.tc)**2;
+    let bestDirection = [0, 0];
+    let bestDistance = Infinity;
 
-          if (tempDist < bestDistance){
-            bestDirection = key;
-            bestDistance = tempDist;
-          }
+    [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach((key) => {
+        if (moves.get(key.toString()) && !(key[0] === -this.dr && key[1] === -this.dc)) {
+            let tempDist = Infinity;
+            if (this.state === 0) tempDist = (key[0] + this.r - this.str) ** 2 + (key[1] + this.c - this.stc) ** 2;
+            if (this.state === 1) tempDist = (key[0] + this.r - this.tr) ** 2 + (key[1] + this.c - this.tc) ** 2;
+
+            if (tempDist < bestDistance) {
+                bestDirection = key;
+                bestDistance = tempDist;
+            }
         }
-      })
-      return [[bestDirection[0]+this.r, bestDirection[1]+this.c], bestDirection];
-    }
+    });
 
-    else{
-      return [[this.dr+this.r, this.dc+this.c], [this.dr, this.dc]];
-    }
-  }
+    return [[bestDirection[0] + this.r, bestDirection[1] + this.c], bestDirection];
+}
+
+// Helper function to validate moves
+isValidMove(r, c, maze) {
+    return r >= 0 && r < maze.length && c >= 0 && c < maze[0].length && maze[r][c] !== 1;
+}
+
 
   // the original code reverses all directions on a state change - so try this later
   // forcedReversal(){
@@ -287,6 +272,10 @@ class Game{
       }
  
       moveGhosts(speed){
+        if (!this.isValidMove(Math.round(ghost.position.x + dx), Math.round(ghost.position.y + dy), this.maze)) {
+          continue; // Skip invalid movement
+      }
+      
         for (const ghost of this.ghosts){
 
           // move a little bit toward the next pos
@@ -309,8 +298,14 @@ class Game{
             ghost.nextPos.x = nextPos[0]; ghost.nextPos.y = nextPos[1]; 
             ghost.nextDir.x = nextDir[0]; ghost.nextDir.y = nextDir[1];
           }
+          
         }
       }
+      
+
+      isValidMove(r, c, maze) {
+        return r >= 0 && r < maze.length && c >= 0 && c < maze[0].length && maze[r][c] !== 1;
+    }
 
       updateGhostTargets(){
          // set red ghost to player
@@ -419,21 +414,30 @@ class Game{
       }
 
       switchGhostStates() {
-        this.currentStateTime++;
-        const modeDuration = [7, 20, 6];
-        if (this.currentStateTime >= modeDuration[this.ghostState]) {
-            const state = Math.max(0, 1 - this.ghostState); 
-            this.setGhostStates(state);
-        }
-      }
+    this.currentStateTime++;
+    const modeDurations = [7, 20, 6]; // Durations for scatter, chase, frightened states
+    if (this.currentStateTime >= modeDurations[this.ghostState]) {
+        this.ghostState = (this.ghostState + 1) % modeDurations.length; // Cycle through states
+        this.setGhostStates(this.ghostState);
+    }
+}
 
-      setGhostStates(state){
-        this.currentStateTime = 0;
-        this.ghostState = state;
-        for (const ghost of this.ghosts){
-          ghost.state = state;
-        }
-      }
+
+setGhostStates(state) {
+  this.currentStateTime = 0;
+  this.ghostState = state;
+  for (const ghost of this.ghosts) {
+      ghost.state = state;
+
+      // Recalculate next position and direction immediately
+      const [nextPos, nextDir] = ghost.nextPosition(this.maze);
+      ghost.nextPos.x = nextPos[0];
+      ghost.nextPos.y = nextPos[1];
+      ghost.nextDir.x = nextDir[0];
+      ghost.nextDir.y = nextDir[1];
+  }
+}
+
 
 
       updateScore(amount){
