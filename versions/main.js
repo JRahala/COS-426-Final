@@ -14,15 +14,9 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 let firstPersonView = false; // Camera state toggle
-const restartButton = document.getElementById("restart-button");
-
-if (restartButton) {
-    restartButton.addEventListener("click", () => {
-        location.reload(); // Reload the page to reset the game
-    });
-} else {
-    console.warn("Restart button not found in the DOM.");
-}
+document.getElementById("restart-button").addEventListener("click", () => {
+    location.reload(); // Reload the page to reset the game
+});
 
 
 // Lighting

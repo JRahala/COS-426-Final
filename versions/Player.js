@@ -48,7 +48,7 @@ export class Player {
         return [Math.round(r), Math.round(c)];
     }
 
-    /*
+
     createPacmanGeometry() {
         // Create a base sphere
         const radius = 0.3;
@@ -85,7 +85,6 @@ export class Player {
         this.mesh.geometry.dispose(); // Dispose of the old geometry
         this.mesh.geometry = this.geometry;
     }
-        */
 
 
     rotateLeft() {
@@ -106,7 +105,6 @@ export class Player {
         if (this.targetDir >= 2 * Math.PI) {
             this.targetDir -= 2 * Math.PI;
         }
-        this.geometry.rotateX(Math.PI / 2);
     }
     
 
