@@ -7,6 +7,19 @@ import { Ghost } from './Ghost.js';
 import { Player } from './Player.js';
 import { Game } from './Game.js';
 
+
+const backgroundMusic = document.getElementById("background-music");
+backgroundMusic.volume = 0.5; 
+backgroundMusic.play().catch((error) => {
+    console.log("Autoplay prevented by browser. Music will start on user interaction.");
+});
+
+window.addEventListener('click', () => {
+    if (backgroundMusic.paused) {
+        backgroundMusic.play();
+    }
+});
+
 // Scene, camera, renderer setup
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -17,7 +30,6 @@ let firstPersonView = true; // Camera state toggle
 document.getElementById("restart-button").addEventListener("click", () => {
     location.reload(); // Reload the page to reset the game
 });
-
 
 // Lighting
 const light = new THREE.AmbientLight(0x404040, 2); // Soft white light
@@ -159,7 +171,6 @@ const animate = () => {
 
     // Update player position
     const speed = dt * 2.5;
-    const ghostSpeed = dt * 0.65;
 
     // Handle player movement based on key state
     if (keys.w || keys.ArrowUp) game.movePlayer(speed);
@@ -182,9 +193,8 @@ const animate = () => {
             ghost.setDirection(direction[0], direction[1]);
             ghost.walking = true;
         }
-        ghost.walk(ghostSpeed);
+        ghost.walk(dt);
         ghost.mesh.position.set(ghost.c_, 0, ghost.r_);
-        ghost.mesh.lookAt(ghost.mesh.position.x + ghost.dc, Math.PI/2, ghost.mesh.position.z + ghost.dr);
     });
 
     // Camera positioning
@@ -192,7 +202,7 @@ const animate = () => {
         const angle = Math.PI + game.player.orientation;
         camera.position.set(game.player.position.y + 2 * Math.sin(angle), 1, game.player.position.x + 2 * Math.cos(angle));
         camera.lookAt(game.player.position.y, 0, game.player.position.x);
-        camera.fov = game.ghosts[0].state == 2 ? 90 : 75; // New field of view in degrees
+        camera.fov = game.ghostState == 2 ? 90 : 75; // New field of view in degrees
         camera.updateProjectionMatrix();
     } else {
         // Default top-down view
@@ -204,7 +214,7 @@ const animate = () => {
     pellets.forEach((pellet) => (pellet.rotation.y += 0.03));
     powerPellets.forEach((powerPellet) => (powerPellet.rotation.y += 0.03));
 
-    // Check for pellet collection
+    const pelletSound = document.getElementById("pellet-sound");
     for (let i = pellets.length - 1; i >= 0; i--) {
         const pellet = pellets[i];
         if (Math.abs(game.player.mesh.position.x - pellet.position.x) < 0.5 &&
@@ -213,6 +223,9 @@ const animate = () => {
             pellets.splice(i, 1);
             game.updateScore(10);
         }
+        pelletSound.currentTime = 0;
+        pelletSound.volume = 0.05;
+        pelletSound.play();
     }
 
     for (let i = powerPellets.length - 1; i >= 0; i--) {
@@ -222,7 +235,7 @@ const animate = () => {
             scene.remove(powerPellet);
             powerPellets.splice(i, 1);
             game.updateScore(50);
-            
+
             // Activate frightened mode for all ghosts
             console.log("Power pellet collected! Ghosts frightened.");
             game.ghosts.forEach((ghost) => (ghost.state = 2));
