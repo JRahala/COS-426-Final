@@ -184,6 +184,7 @@ const animate = () => {
         }
         ghost.walk(ghostSpeed);
         ghost.mesh.position.set(ghost.c_, 0, ghost.r_);
+        ghost.mesh.lookAt(ghost.mesh.position.x + ghost.dc, Math.PI/2, ghost.mesh.position.z + ghost.dr);
     });
 
     // Camera positioning
