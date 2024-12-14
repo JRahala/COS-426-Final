@@ -1,4 +1,4 @@
-import { OBJLoader } from "./loaders/OBJLoader.js";
+import { OBJLoader } from "../pacman3d/loaders/OBJLoader.js";
 
 export class addHeads{
   constructor(scene, modelPath, x, y,z) {
