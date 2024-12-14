@@ -171,6 +171,7 @@ const animate = () => {
 
     // Update player position
     const speed = dt * 2.5;
+    const ghostSpeed = dt * 0.65;
 
     // Handle player movement based on key state
     if (keys.w || keys.ArrowUp) game.movePlayer(speed);
@@ -182,7 +183,7 @@ const animate = () => {
     game.player.mesh.position.set(game.player.position.y, 0, game.player.position.x);
 
     // Update ghost positions and behaviors
-    game.updateGhostModes(dt);
+    game.updateGhostModes(ghostSpeed);
     game.ghosts.forEach((ghost) => {
         if (!ghost.walking) {
             if (ghost.state === 0) ghost.scatter(); // Scatter mode
@@ -193,8 +194,9 @@ const animate = () => {
             ghost.setDirection(direction[0], direction[1]);
             ghost.walking = true;
         }
-        ghost.walk(dt);
+        ghost.walk(ghostSpeed);
         ghost.mesh.position.set(ghost.c_, 0, ghost.r_);
+        ghost.mesh.lookAt(ghost.mesh.position.x + ghost.dc, Math.PI/2, ghost.mesh.position.z + ghost.dr);
     });
 
     // Camera positioning
