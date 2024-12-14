@@ -56,11 +56,12 @@ export class Game{
         // setTimeout(() => {
             // ghost.mesh.visible = true;
         ghost.state = this.currentMode; // Restore its previous mode
-        ghost.r = ghost.str; // Reset to starting position
-        ghost.c = ghost.stc;
-        ghost.r_ = ghost.str;
-        ghost.c_ = ghost.stc;
+        ghost.r = ghost.ro; // Reset to starting position
+        ghost.c = ghost.co;
+        ghost.r_ = ghost.ro;
+        ghost.c_ = ghost.co;
         ghost.setTarget(ghost.tr, ghost.tc); // Reset its target
+        ghost.resetColor();
         console.log(`Ghost respawned: ${ghost.color.toString(16)}`);
         // }, 5000);
     }
@@ -120,9 +121,6 @@ export class Game{
 
         this.player.position.x = nx;
         this.player.position.y = ny;
-
-        console.log(nr);
-        console.log(nc);
 
         this.player.r = nr; 
         this.player.c = nc;

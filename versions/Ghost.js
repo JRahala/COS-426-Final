@@ -9,6 +9,9 @@ export class Ghost {
         this.r = r;
         this.c = c;
 
+        this.ro = r;
+        this.co = c;
+
         // The static square they want to move to
         this.str = str;
         this.stc = stc;
@@ -109,18 +112,21 @@ export class Ghost {
     }
 
     setColor(color){
-        this.color = color;
         this.mesh.traverse((child) => {
             if (child.isMesh) {
                 child.material = new THREE.MeshStandardMaterial({
-                    color: this.color,
-                    emissive: this.color,
+                    color: color,
+                    emissive: color,
                     emissiveIntensity: 0.8,
                     roughness: 0.5,
                     metalness: 0.2,
                 });
             }
         });
+    }
+
+    resetColor() {
+        this.setColor(this.color);
     }
 
     nextPosition() {
@@ -227,7 +233,7 @@ export class Ghost {
                 const meshScaling = 0.05;
                 obj.scale.set(meshScaling, meshScaling, meshScaling);
                 obj.position.set(0, 0, 0);
-                obj.rotation.x = -Math.PI / 2;
+                obj.rotation.x = -Math.PI;
                 obj.traverse((child) => {
                     if (child.isMesh) {
                         child.material = new THREE.MeshStandardMaterial({
