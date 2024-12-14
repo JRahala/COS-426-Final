@@ -244,6 +244,7 @@ function update(dt) {
 }
 
 function animate() {
+    let dt = 1;
   requestAnimationFrame(animate);
   update(dt);
   const activeCamera = useFirstPersonCamera ? camera : overheadCamera;

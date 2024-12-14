@@ -1,7 +1,8 @@
+
 export class  cubeCluster{
     constructor(cubeSize, color) {
         this.cubeSize =1;
-        this.color = color;
+        this.color = 0x00ff00;
         const material = new THREE.MeshStandardMaterial({color : this.color});
         const centerCube = new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), material)
         const lCube = new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), material);
@@ -13,15 +14,17 @@ export class  cubeCluster{
         this.group.add(lCube);
         this.group.add(rCube);
         this.cubes = [centerCube, lCube, rCube];
-        this.floatDir = 1;
-        this.miny = this.group.position.y - 1;
-        this.maxy =this.group.position.y+ 1;
+        this.floatDir = 0;
+        this.miny = 1;
+        this.maxy = 1;
     }
-   
+    
     getMesh() {
         return this.group;
     }
-       
+        
+
+
     colorChange(){
        for ( const cube of this.cubes) {
             cube.material.color.setHex(Math.random()*0x00ff00)
@@ -31,11 +34,10 @@ export class  cubeCluster{
        
         this.group.position.y += 0.01*this.floatDir
 
-
         if (this.group.position.y >= this.maxy)
             this.floatDir =-1;
             //move down greater than ... you've reached maxed height
-       else if (this.group.position.y <= this.miny )
+       else if (headmesh.position.y <= this.miny )
             this.floatDir = 1;
        requestAnimationFrame(()=> this.float());
     }

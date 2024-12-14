@@ -6,10 +6,34 @@ class Ghost{
     this.dc = dc;
     this.tr = tr;
     this.tc = tc;
+
+    this.position = new THREE.Vector2(r, c);
+    this.orientation = 0;
+
+    this.nextPos = new THREE.Vector2(r, c);
+    this.nextDir = new THREE.Vector2(dr, dc);
+
+    this.ro = r;
+    this.co = r;
+
     this.state = 0; // 0 = scatter, 1 = chase, 2 = frightened
     // scatter target tiles
     this.str = str;
     this.stc = stc;
+  }
+
+  reset(){
+      this.r = this.ro;
+      this.c = this.co;
+      this.dr = 0;
+      this.dc = 0;
+      this.pellets = 0;
+      
+      this.position = new THREE.Vector2(this.r, this.c);
+      this.orientation = 0;
+
+      this.nextPos = new THREE.Vector2(this.r, this.c);
+      this.nextDir = new THREE.Vector2(this.dr, this.dc);
   }
 
   frightenedChoice(moves){
@@ -94,6 +118,9 @@ class Player{
         this.dr = dr;
         this.dc = dc;
         this.pellets = 0;
+
+        this.position = new THREE.Vector2(r, c);
+        this.orientation = 0;
     }
 }
 
@@ -119,8 +146,22 @@ class Game{
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
       ];
 
-      constructor(){
+      constructor(scene){
+        this.scene = scene;
+
+        this.score = 0;
+        this.isOver = false
+
         this.resetGame();
+
+        this.ghostState = 0;
+        this.currentStateTime = 0;
+        this.ghostSwitchTimer = setInterval(() => {
+          this.switchGhostStates();
+        }, 1000);
+
+        this.pellets = [];
+        this.powerPellets = [];
       }
 
       resetGame(){
@@ -132,6 +173,11 @@ class Game{
         this.player = new Player(7, 10, 1, 0);
         this.ghosts = [redGhost, pinkGhost, blueGhost, orangeGhost];
         this.maze = this.resetMaze();
+        this.isOver = false;
+
+        this.setGhostStates(0);
+
+        this.resetScore();
       }
 
       resetMaze(){
@@ -144,11 +190,40 @@ class Game{
         return this.maze;
       }
 
-      movePlayer(dr, dc){
+      movePlayer(speed){
         // TODO: update when doing power pellets / frightened mode / etc
-        let [nr, nc] = [this.player.r+dr, this.player.c+dc];
-        if (this.maze[nr][nc] == 1) return;
-        
+
+        let dx = speed * Math.cos(this.player.orientation);
+        let dy = speed * Math.sin(this.player.orientation);
+
+        let nx = this.player.position.x + dx;
+        let ny = this.player.position.y + dy;
+
+        let nr = Math.round(nx);
+        let nc = Math.round(ny);
+
+        if (this.maze[nr][nc] == 1) {
+          if (this.maze[nr][this.player.c] != 1) {
+            // can move row but not column
+            dy = 0; 
+            ny = this.player.position.y;
+            nc = this.player.c;
+          }
+          else if (this.maze[this.player.r][nc] != 1) {
+            // can move column but not row
+            dx = 0; 
+            nx = this.player.position.x;
+            nr = this.player.r;
+          }
+          else {
+            // cannot move either
+            return 
+          }
+        }
+
+        this.player.position.x = nx;
+        this.player.position.y = ny;
+
         this.player.r = nr; 
         this.player.c = nc;
         
@@ -157,15 +232,37 @@ class Game{
           this.player.pellets++;
         }
 
-        this.player.dr = dr;
-        this.player.dc = dc;
+        this.player.dr = Math.round(dx);
+        this.player.dc = Math.round(dy);
       }
 
-      moveGhosts(){
+      rotatePlayer(angle){
+        this.player.orientation += angle;
+      }
+ 
+      moveGhosts(speed){
         for (const ghost of this.ghosts){
-          const [nextPos, nextDir] = ghost.nextPosition(this.maze);
-          ghost.r = nextPos[0]; ghost.c = nextPos[1];
-          ghost.dr = nextDir[0]; ghost.dc = nextDir[1];
+
+          // move a little bit toward the next pos
+          ghost.position.x = ghost.position.x + speed * (ghost.nextPos.x - ghost.r);
+          ghost.position.y = ghost.position.y + speed * (ghost.nextPos.y - ghost.c);
+
+          // when done moving to the correct next pos
+          if (Math.abs(ghost.position.x - ghost.nextPos.x) < speed && Math.abs(ghost.position.y - ghost.nextPos.y) < speed){
+
+            ghost.r = Math.round(ghost.position.x); 
+            ghost.c = Math.round(ghost.position.y);
+  
+            ghost.dr = ghost.nextDir.x; 
+            ghost.dc = ghost.nextDir.y;
+
+            ghost.orientation = Math.atan2(ghost.nextDir.x, ghost.nextDir.y); 
+
+            // update next pos
+            const [nextPos, nextDir] = ghost.nextPosition(this.maze);
+            ghost.nextPos.x = nextPos[0]; ghost.nextPos.y = nextPos[1]; 
+            ghost.nextDir.x = nextDir[0]; ghost.nextDir.y = nextDir[1];
+          }
         }
       }
 
@@ -197,6 +294,80 @@ class Game{
             this.ghosts[3].tc = this.ghosts[3].stc;
         }
       }
+      
+      checkGhostCollision(){
+        for (const ghost of this.ghosts){
+            if (Math.abs(ghost.r - this.player.r) < 1 && Math.abs(ghost.c - this.player.c) < 1){
+              if (ghost.state == 2){
+                ghost.reset()
+                this.updateScore(200);
+              } else {
+                const deathMessage = document.getElementById("death-message");
+                deathMessage.style.display = "flex";
+                this.isOver = true;
+              }
+              return;
+            }
+        }
+      }
+
+      checkPelletConsumption() {
+        const pelletConsumptionRadius = 0.7071; // allows for diagonal passes
+
+        for (let i = this.pellets.length - 1; i >= 0; i--) {
+            const pellet = this.pellets[i];
+            if (Math.abs(player.position.x - pellet.position.x) < pelletConsumptionRadius &&
+                Math.abs(player.position.z - pellet.position.z) < pelletConsumptionRadius) {
+                scene.remove(pellet); 
+                this.pellets.splice(i, 1); 
+                this.updateScore(10);
+            }
+        }
+
+        for (let i = this.powerPellets.length - 1; i >= 0; i--) {
+            const powerPellet = this.powerPellets[i];
+            if (Math.abs(player.position.x - powerPellet.position.x) < pelletConsumptionRadius &&
+                Math.abs(player.position.z - powerPellet.position.z) < pelletConsumptionRadius) {
+                scene.remove(powerPellet); 
+                this.powerPellets.splice(i, 1);
+                this.updateScore(50);
+
+                // changed to frightened state
+                this.setGhostStates(2);
+            }
+        }
+      }
+
+      switchGhostStates() {
+        this.currentStateTime++;
+        const modeDuration = [7, 20, 6];
+        if (this.currentStateTime >= modeDuration[this.ghostState]) {
+            const state = Math.max(0, 1 - this.ghostState); 
+            this.setGhostStates(state);
+        }
+      }
+
+      setGhostStates(state){
+        this.currentStateTime = 0;
+        this.ghostState = state;
+        for (const ghost of this.ghosts){
+          ghost.state = state;
+        }
+        const modeElement = document.getElementById("mode-display");
+        modeElement.textContent = `Mode: ${state}`;
+      }
+
+      updateScore(amount){
+        this.score += amount 
+        const scoreElement = document.getElementById("score");
+        scoreElement.textContent = this.score;
+      }
+
+      resetScore(){
+        this.score = 0;
+        const scoreElement = document.getElementById("score");
+        scoreElement.textContent = this.score;
+      }
 }
 
 
@@ -209,6 +380,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+let isFirstPersonView = true;
 
 // Add a basic light
 const light = new THREE.AmbientLight(0x404040, 2); // Soft white light
@@ -236,10 +408,10 @@ const createWall = (x, y, z) => {
     return wall;
 };
 
-
+const size = 0.4;
 // Create player and ghost placeholders
 const createSphere = (color, x, y, z) => {
-    const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const sphereGeometry = new THREE.SphereGeometry(size, 32, 32);
     const sphereMaterial = new THREE.MeshStandardMaterial({ color });
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.position.set(x, y, z);
@@ -252,10 +424,10 @@ scene.add(player);
 
 // Ghosts
 const ghosts = [
-    createSphere(0xff0000, 15, 0.5, 12), // Red ghost
-    createSphere(0xffb6c1, 1, 0.5, 7),  // Pink ghost
-    createSphere(0x0000ff, 1, 0.5, 10), // Blue ghost
-    createSphere(0xffa500, 15, 0.5, 14) // Orange ghost
+    createSphere(0xff0000, 15, size, 12), // Red ghost
+    createSphere(0xffb6c1, 1, size, 7),  // Pink ghost
+    createSphere(0x0000ff, 1, size, 10), // Blue ghost
+    createSphere(0xffa500, 15, size, 14) // Orange ghost
 ];
 ghosts.forEach(ghost => scene.add(ghost));
 
@@ -272,92 +444,98 @@ const createPellet = (x, z, isPowerUp = false) => {
   return pellet;
 };
 
-// Arrays to store pellets and power-up pellets
-const pellets = [];
-const powerPellets = [];
-
-
-
-// Position the camera
-camera.position.set(19/2-1/2, 25, 25);
-camera.lookAt(19/2-1/2, 0, 0);
-
 // Animate the scene
 const animate = () => {
     requestAnimationFrame(animate);
 
-    // Rotate pellets for a dynamic effect
-    pellets.forEach(pellet => pellet.rotation.y += 0.03);
-    powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
+    if (G.isOver) {
+      return;
+    }
+
+    const movementSpeed = 0.03;
+    const rotationSpeed = 0.03;
+
+    // Handle player movement based on key state
+    if (keys.w || keys.ArrowUp) G.movePlayer(movementSpeed);
+    if (keys.s || keys.ArrowDown) G.movePlayer(-movementSpeed);
+    if (keys.a || keys.ArrowLeft) G.rotatePlayer(rotationSpeed);
+    if (keys.d || keys.ArrowRight) G.rotatePlayer(-rotationSpeed);
+
+    // Move the ghosts
+    G.moveGhosts(movementSpeed);
+
+    // Update the ghost targets
+    G.updateGhostTargets();
+
+    // Check for ghost collision
+    G.checkGhostCollision();
 
     // Check for pellet consumption
-    for (let i = pellets.length - 1; i >= 0; i--) {
-        const pellet = pellets[i];
-        if (Math.abs(player.position.x - pellet.position.x) < 0.5 &&
-            Math.abs(player.position.z - pellet.position.z) < 0.5) {
-            scene.remove(pellet); // Remove the pellet from the scene
-            pellets.splice(i, 1); // Remove it from the array
-        }
-    }
-
-    for (let i = powerPellets.length - 1; i >= 0; i--) {
-        const powerPellet = powerPellets[i];
-        if (Math.abs(player.position.x - powerPellet.position.x) < 0.5 &&
-            Math.abs(player.position.z - powerPellet.position.z) < 0.5) {
-            scene.remove(powerPellet); // Remove the power-up pellet
-            powerPellets.splice(i, 1);
-            // Add power-up effect here if needed
-        }
-    }
+    G.checkPelletConsumption();
 
     // Update positions based on the game state
-    player.position.set(G.player.c, 0.5, G.player.r);
+    player.position.set(G.player.position.y, 0, G.player.position.x);
     
     G.ghosts.forEach((g, i) => {
-        ghosts[i].position.set(g.c, 0.5, g.r);
+        ghosts[i].position.set(g.position.y, 0, g.position.x);
     });
+
+    // Rotate pellets for a dynamic effect
+    G.pellets.forEach(pellet => pellet.rotation.y += 0.03);
+    G.powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
+
+    // Position the camera
+    if (isFirstPersonView) {
+        const angle = Math.PI + G.player.orientation;
+        camera.position.set(G.player.position.y + 2 * Math.sin(angle), 1, G.player.position.x + 2 * Math.cos(angle));
+        camera.lookAt(G.player.position.y, 0, G.player.position.x);
+    } else {
+        camera.position.set(19 / 2 - 1 / 2, 15, 20);
+        camera.lookAt(19 / 2 - 1 / 2, -10, 0);
+    }
 
     renderer.render(scene, camera);
 };
 
-// Temporary controls for debugging
+// Track which keys are currently pressed
+const keys = {
+  ArrowUp: false,
+  ArrowDown: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+  w: false,
+  s: false,
+  a: false,
+  d: false,
+};
+
+// Controls
 window.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowUp') G.movePlayer(-1, 0);
-    if (event.key === 'ArrowDown') G.movePlayer(1, 0);
-    if (event.key === 'ArrowLeft') G.movePlayer(0, -1);
-    if (event.key === 'ArrowRight') G.movePlayer(0, 1);
-    
-    if (event.key == "s"){
-      console.log("Set to scattered mode")
-      for (const ghost of G.ghosts){
-        ghost.forcedReversal();
-        ghost.state = 0;
-      }
-    }
-    
-    if (event.key == "c"){
-      console.log("Set to chase mode")
-      for (const ghost of G.ghosts){
-        ghost.forcedReversal();
-        ghost.state = 1;
-      }
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = true;
     }
 
-    if (event.key == "f"){
-      console.log("Set to frightened mode")
-      for (const ghost of G.ghosts){
-        ghost.forcedReversal();
-        ghost.state = 2;
-      }
+    if (event.key === 'v') { // Press 'V' to toggle view mode
+      console.log(`View mode: ${isFirstPersonView ? 'First-Person' : 'Overhead'}`);
+      isFirstPersonView = !isFirstPersonView;
     }
+});
 
-    G.moveGhosts();
-    G.updateGhostTargets();
+window.addEventListener('keyup', (event) => {
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = false;
+    }
+});
+
+const respawnButton = document.getElementById("respawn-button");
+respawnButton.addEventListener("click", () => {
+    const deathMessage = document.getElementById("death-message");
+    deathMessage.style.display = "none"; 
+    G.resetGame(); 
 });
 
 
-
-const G = new Game();
+const G = new Game(scene);
 
 // Generate walls and add to the scene
 const maze = G.maze;
@@ -376,11 +554,11 @@ for (let r = 0; r < maze.length; r++) {
   for (let c = 0; c < maze[r].length; c++) {
       if (maze[r][c] === 2) { // Regular pellets
           const pellet = createPellet(c, r, false);
-          pellets.push(pellet);
+          G.pellets.push(pellet);
           scene.add(pellet);
       } else if (G.maze[r][c] === 3) { // Power-up pellets
           const powerPellet = createPellet(c, r, true);
-          powerPellets.push(powerPellet);
+          G.powerPellets.push(powerPellet);
           scene.add(powerPellet);
       }
   }
