@@ -217,9 +217,9 @@ export class Ghost {
                         child.material = new THREE.MeshStandardMaterial({
                             color: ghost.color,
                             emissive: ghost.color,
-                            emissiveIntensity: 1.45,
+                            emissiveIntensity: 0.8,
                             roughness: 0.5,
-                            metalness: 0.3,
+                            metalness: 0.2,
                         });
                     }
                 });
