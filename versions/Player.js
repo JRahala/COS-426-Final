@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 export class Player {
-    static rotSpeed = 2;
-    static moveSpeed = 2;
+    static rotSpeed = 3;
+    static moveSpeed = 3;
     static smoothingFactor = 10; // Higher value = smoother transition
 
     constructor(game, r, c, dir = 0) {

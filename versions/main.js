@@ -13,7 +13,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-let firstPersonView = false; // Camera state toggle
+let firstPersonView = true; // Camera state toggle
 document.getElementById("restart-button").addEventListener("click", () => {
     location.reload(); // Reload the page to reset the game
 });
@@ -150,9 +150,9 @@ const animate = () => {
     // Camera positioning
     if (firstPersonView) {
         camera.position.set(
-            game.player.mesh.position.x - Math.cos(game.player.dir) * 0.5,
+            game.player.mesh.position.x - Math.cos(game.player.dir) * 1,
             1, // Slightly above Pac-Man
-            game.player.mesh.position.z - Math.sin(game.player.dir) * 0.5
+            game.player.mesh.position.z - Math.sin(game.player.dir) * 1
         );
         camera.lookAt(game.player.mesh.position);
     } else {
@@ -211,31 +211,10 @@ window.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowLeft') game.player.rotateLeft();
     if (event.key === 'ArrowRight') game.player.rotateRight();
 
-    if (event.key === 's') {
-        console.log("Scatter mode activated");
-        game.ghosts.forEach((ghost) => {
-            ghost.state = 0; 
-            ghost.scatter(); 
-        });
-    }
     if (game.isGameOver) {
         console.log("Animation stopped: Game Over.");
         return; // Stop animation if the game is over
     }
-    if (event.key === 'c') {
-        console.log("Chase mode activated");
-        game.ghosts.forEach((ghost) => {
-            ghost.state = 1; // Chase state
-        });
-    }
-
-    if (event.key === 'f') {
-        console.log("Frightened mode activated");
-        game.ghosts.forEach((ghost) => {
-            ghost.state = 2; // Frightened state
-        });
-    }
-
     if (event.key === 'v') {
         firstPersonView = !firstPersonView;
         console.log(`Camera mode: ${firstPersonView ? "First-Person" : "Default"}`);
