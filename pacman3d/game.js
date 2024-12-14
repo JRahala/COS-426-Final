@@ -159,9 +159,7 @@ class Game{
         this.ghostSwitchTimer = setInterval(() => {
           this.switchGhostStates();
         }, 1000);
-
-        this.pellets = [];
-        this.powerPellets = [];
+        this.ghostsEaten = 0;
       }
 
       resetGame(){
@@ -174,7 +172,9 @@ class Game{
         this.ghosts = [redGhost, pinkGhost, blueGhost, orangeGhost];
         this.maze = this.resetMaze();
         this.isOver = false;
+        this.ghostsEaten = 0;
 
+        this.generatePellets();
         this.setGhostStates(0);
 
         this.resetScore();
@@ -299,11 +299,15 @@ class Game{
         for (const ghost of this.ghosts){
             if (Math.abs(ghost.r - this.player.r) < 1 && Math.abs(ghost.c - this.player.c) < 1){
               if (ghost.state == 2){
+                // pacman eats ghost
                 ghost.reset()
-                this.updateScore(200);
+                this.ghostsEaten++;
+                this.updateScore(200 * this.ghostsEaten);
+                this.setGhostStates(0);
               } else {
-                const deathMessage = document.getElementById("death-message");
-                deathMessage.style.display = "flex";
+                // ghost kills pacman
+                document.getElementById("death-message").style.display = "flex";
+                document.getElementById("final-score").innerText = this.score;
                 this.isOver = true;
               }
               return;
@@ -335,6 +339,37 @@ class Game{
                 // changed to frightened state
                 this.setGhostStates(2);
             }
+        }
+      }
+
+      generatePellets() {
+        // Destroy any existing pellets
+        if (this.pellets) {
+            for (const pellet of this.pellets) {
+                scene.remove(pellet);
+            }
+        }
+        if (this.powerPellets) {
+          for (const pellet of this.powerPellets) {
+              scene.remove(pellet);
+          }
+        }
+        this.pellets = [];
+        this.powerPellets = [];
+
+        // Generate new pellets and add them to the scene
+        for (let r = 0; r < this.maze.length; r++) {
+          for (let c = 0; c < this.maze[r].length; c++) {
+              if (this.maze[r][c] === 2) { // Regular pellets
+                  const pellet = createPellet(c, r, false);
+                  this.pellets.push(pellet);
+                  scene.add(pellet);
+              } else if (this.maze[r][c] === 3) { // Power-up pellets
+                  const powerPellet = createPellet(c, r, true);
+                  this.powerPellets.push(powerPellet);
+                  scene.add(powerPellet);
+              }
+          }
         }
       }
 
@@ -546,22 +581,6 @@ for (let r = 0; r < maze.length; r++) {
             scene.add(wall);
         }
     }
-}
-
-
-// Generate pellets and add them to the scene
-for (let r = 0; r < maze.length; r++) {
-  for (let c = 0; c < maze[r].length; c++) {
-      if (maze[r][c] === 2) { // Regular pellets
-          const pellet = createPellet(c, r, false);
-          G.pellets.push(pellet);
-          scene.add(pellet);
-      } else if (G.maze[r][c] === 3) { // Power-up pellets
-          const powerPellet = createPellet(c, r, true);
-          G.powerPellets.push(powerPellet);
-          scene.add(powerPellet);
-      }
-  }
 }
 
 
