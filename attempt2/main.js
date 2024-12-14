@@ -3,8 +3,12 @@ import { Renderable } from "./Renderable.js";
 import { Player } from "./Player.js";
 import { Game } from "./Game.js";
 import {addHeads} from "./Ghost.js";
+<<<<<<< HEAD
 import { cubeCluster } from './Powerup.js';
 
+=======
+import {cubeCluster} from "./Powerup.js"
+>>>>>>> 313ad8cef194648859ac540309a94bbfc96d24df
 console.log("Hello world!");
 
 const G = new Game();

@@ -1,4 +1,4 @@
-import { OBJLoader } from "./loaders/OBJLoader.js";
+import { OBJLoader } from "../pacman3d/loaders/OBJLoader.js";
 
 export class Ghost {
   constructor(scene, modelPath, r, c, dr, dc, tr, tc, str, stc, color) {

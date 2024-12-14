@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 import {Ghost} from "./Ghost.js"
 /*class Ghost{
+=======
+// import {OBJLoader} from './loaders/OBJLoader.js';
+
+class Ghost{
+>>>>>>> 313ad8cef194648859ac540309a94bbfc96d24df
   constructor(r, c, dr, dc, tr, tc, str, stc){
     this.r = r;
     this.c = c;
@@ -21,6 +27,12 @@ import {Ghost} from "./Ghost.js"
     // scatter target tiles
     this.str = str;
     this.stc = stc;
+
+    this.manequin = null;
+    this.floatDir = 1;
+    this.maxy = 1;
+    this.miny = 1;
+    // this.loadModel();
   }
 
   reset(){
@@ -37,80 +49,103 @@ import {Ghost} from "./Ghost.js"
       this.nextDir = new THREE.Vector2(this.dr, this.dc);
   }
 
-  frightenedChoice(moves){
-    // choose a random choice that is available
-    const prefs = [[0,1],[1,0],[0,-1],[-1,0]];
-    let index = Math.floor(Math.random() * 4 - 0.0001);
-    for (let i=0; i<4; i++){
-      let j = (index+i) % 4;
-      // make sure its not opposite - this may cause a glitch if the reversal happens at the exact time before - pray this doesnt happen
-      if (moves.get(prefs[j].toString()) && !(prefs[j][0] == -this.dr && prefs[j][1] == -this.dc)) return [[prefs[j][0]+this.r, prefs[j][1]+this.c], prefs[j]];
-    }
-    return [[this.r,this.c],[0,0]];
-  }
+  frightenedChoice(moves) {
+    const prefs = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // Directions: right, down, left, up
+    const validMoves = prefs.filter(dir => moves.get(dir.toString()));
 
-  // return new position and direction of this movement
-  nextPosition(maze){
+    if (validMoves.length === 0) {
+        return [[this.r, this.c], [0, 0]]; // Stay in place if no valid moves
+    }
+
+    let index = Math.floor(Math.random() * validMoves.length);
+    return [[validMoves[index][0] + this.r, validMoves[index][1] + this.c], validMoves[index]];
+}
+
+
+  nextPosition(maze) {
     const moves = new Map();
-    // THE ORDER OF THE BELOW IS IMPORTANT ELSE WE GET ZIG-ZAG BEHAVIOUR (NOW SET TO RDLU) MAKE SURE SAME FOR FOREACH LATER
-    // This also defines the order we iterate over the keys !!!!!! MAKE SURE THIS IS CONSISTENT WHEN ITERATION ELSE CAN GET INFINITE BACK AND FORTH WITHOUT PREFERENCE
-    moves.set([0,1].toString(), maze[this.r][this.c+1] != 1);
-    moves.set([1,0].toString(), maze[this.r+1][this.c] != 1);
-    moves.set([0,-1].toString(), maze[this.r][this.c-1] != 1);
-    moves.set([-1,0].toString(), maze[this.r-1][this.c] != 1);
 
-    // if frightened make random choice
-    if (this.state == 2){
-      return this.frightenedChoice(moves);
+    // Define valid moves based on the maze
+    moves.set([0, 1].toString(), this.isValidMove(this.r, this.c + 1, maze)); // Right
+    moves.set([1, 0].toString(), this.isValidMove(this.r + 1, this.c, maze)); // Down
+    moves.set([0, -1].toString(), this.isValidMove(this.r, this.c - 1, maze)); // Left
+    moves.set([-1, 0].toString(), this.isValidMove(this.r - 1, this.c, maze)); // Up
+
+    if (this.state === 2) {
+        return this.frightenedChoice(moves); // Random move when frightened
     }
 
-    //console.log("MOVE DOWN", moves.get([1,0].toString()));
-    //console.log("MOVE UP", moves.get([-1,0].toString()));
-    //console.log("MOVE RIGHT", moves.get([0,1].toString()));
-    //console.log("MOVE LEFT", moves.get([0,-1].toString()));
-    
-    // if either can't move forward
-    // or can move orthogonal, reconsider choices
-    if (
-      !moves.get([this.dr, this.dc].toString()) || 
-      (this.dr == 0 && (moves.get([1,0].toString()) || moves.get([-1,0].toString()))) || 
-      (this.dc == 0 && (moves.get([0,1].toString()) || moves.get([0,-1].toString())))
-    ){
-      // go over all choices and choose one that takes you closest to target
-      let bestDirection = [0,0];
-      let bestDistance = 1e10;
-      
-      // FOR NOW THIS USES MANHATTAN DISTANCE, EDIT TO EUCLIDEAN IF WE WANT LATER - This is bad think about target above and going right vs down is the same
-      [[0,1],[1,0],[0,-1],[-1,0]].forEach((key) => {
-        // only non-wall moves and no direct backwards
-        if (moves.get(key.toString()) && !(key[0] == -this.dr && key[1] == -this.dc)){
-          // edit distance based on state
-          let tempDist = 1e9;
-          if (this.state == 0) tempDist = (key[0]+this.r-this.str)**2 + (key[1]+this.c-this.stc)**2;
-          if (this.state == 1) tempDist = (key[0]+this.r-this.tr)**2 + (key[1]+this.c-this.tc)**2;
+    let bestDirection = [0, 0];
+    let bestDistance = Infinity;
 
-          if (tempDist < bestDistance){
-            bestDirection = key;
-            bestDistance = tempDist;
-          }
+    [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach((key) => {
+        if (moves.get(key.toString()) && !(key[0] === -this.dr && key[1] === -this.dc)) {
+            let tempDist = Infinity;
+            if (this.state === 0) tempDist = (key[0] + this.r - this.str) ** 2 + (key[1] + this.c - this.stc) ** 2;
+            if (this.state === 1) tempDist = (key[0] + this.r - this.tr) ** 2 + (key[1] + this.c - this.tc) ** 2;
+
+            if (tempDist < bestDistance) {
+                bestDirection = key;
+                bestDistance = tempDist;
+            }
         }
-      })
-      return [[bestDirection[0]+this.r, bestDirection[1]+this.c], bestDirection];
-    }
+    });
 
-    else{
-      return [[this.dr+this.r, this.dc+this.c], [this.dr, this.dc]];
-    }
-  }
+    return [[bestDirection[0] + this.r, bestDirection[1] + this.c], bestDirection];
+}
+
+// Helper function to validate moves
+isValidMove(r, c, maze) {
+    return r >= 0 && r < maze.length && c >= 0 && c < maze[0].length && maze[r][c] !== 1;
+}
+
 
   // the original code reverses all directions on a state change - so try this later
-  forcedReversal(){
-    this.dr *= -1;
-    this.dc *= -1;
-  }
+  // forcedReversal(){
+  //   this.dr *= -1;
+  //   this.dc *= -1;
+  // }
 
+  // loadModel() {
+  //   const loader = new OBJLoader();
+  //   loader.load('head/head.obj', (obj) => {
+  //       this.manequin = obj;
+  //       this.manequin.position.set(this.r,-this.c,0);
+  //       this.manequin.scale.set(1, 1, 1);  
+  //       this.manequin.rotation.x = -Math.PI/2;
+  //       console.log("model loaded and added to scene")
+  //       this.float();
+  //   },
+  //   undefined,
+  //   (error) =>{
+  //       console.error("manequin hasn't loaded", error);
+  //   }
+  //   );
 }
 */
+
+//  // want head to float
+//  float(){
+//   if(this.manequin == null) {
+//       requestAnimationFrame(()=> this.float());
+//       return;
+//   }
+//   this.manequin.position.y += 0.05*this.floatDir
+
+
+//   if (this.manequin.position.y >= this.maxy)
+//       this.floatDir =-1;
+//       //move down greater than ... you've reached maxed height
+//  else if (this.manequin.position.y <= this.miny )
+//       this.floatDir = 1;
+//  requestAnimationFrame(()=> this.float());
+// }
+
+// getMesh(){
+//   return this.manequin;
+// }
+
+// }
 
 
 class Player{
@@ -161,9 +196,7 @@ class Game{
         this.ghostSwitchTimer = setInterval(() => {
           this.switchGhostStates();
         }, 1000);
-
-        this.pellets = [];
-        this.powerPellets = [];
+        this.ghostsEaten = 0;
       }
 
       resetGame(){
@@ -177,7 +210,9 @@ class Game{
         this.ghosts = [redGhost, pinkGhost, blueGhost, orangeGhost];
         this.maze = this.resetMaze();
         this.isOver = false;
+        this.ghostsEaten = 0;
 
+        this.generatePellets();
         this.setGhostStates(0);
 
         this.resetScore();
@@ -244,6 +279,10 @@ class Game{
       }
  
       moveGhosts(speed){
+        if (!this.isValidMove(Math.round(ghost.position.x + dx), Math.round(ghost.position.y + dy), this.maze)) {
+          continue; // Skip invalid movement
+      }
+      
         for (const ghost of this.ghosts){
 
           // move a little bit toward the next pos
@@ -266,8 +305,14 @@ class Game{
             ghost.nextPos.x = nextPos[0]; ghost.nextPos.y = nextPos[1]; 
             ghost.nextDir.x = nextDir[0]; ghost.nextDir.y = nextDir[1];
           }
+          
         }
       }
+      
+
+      isValidMove(r, c, maze) {
+        return r >= 0 && r < maze.length && c >= 0 && c < maze[0].length && maze[r][c] !== 1;
+    }
 
       updateGhostTargets(){
          // set red ghost to player
@@ -302,11 +347,14 @@ class Game{
         for (const ghost of this.ghosts){
             if (Math.abs(ghost.r - this.player.r) < 1 && Math.abs(ghost.c - this.player.c) < 1){
               if (ghost.state == 2){
+                // pacman eats ghost
                 ghost.reset()
-                this.updateScore(200);
+                this.ghostsEaten++;
+                this.updateScore(Math.max(1600, 200 * this.ghostsEaten));
               } else {
-                const deathMessage = document.getElementById("death-message");
-                deathMessage.style.display = "flex";
+                // ghost kills pacman
+                document.getElementById("death-message").style.display = "flex";
+                document.getElementById("final-score").innerText = this.score;
                 this.isOver = true;
               }
               return;
@@ -341,24 +389,63 @@ class Game{
         }
       }
 
-      switchGhostStates() {
-        this.currentStateTime++;
-        const modeDuration = [7, 20, 6];
-        if (this.currentStateTime >= modeDuration[this.ghostState]) {
-            const state = Math.max(0, 1 - this.ghostState); 
-            this.setGhostStates(state);
+      generatePellets() {
+        // Destroy any existing pellets
+        if (this.pellets) {
+            for (const pellet of this.pellets) {
+                scene.remove(pellet);
+            }
+        }
+        if (this.powerPellets) {
+          for (const pellet of this.powerPellets) {
+              scene.remove(pellet);
+          }
+        }
+        this.pellets = [];
+        this.powerPellets = [];
+
+        // Generate new pellets and add them to the scene
+        for (let r = 0; r < this.maze.length; r++) {
+          for (let c = 0; c < this.maze[r].length; c++) {
+              if (this.maze[r][c] === 2) { // Regular pellets
+                  const pellet = createPellet(c, r, false);
+                  this.pellets.push(pellet);
+                  scene.add(pellet);
+              } else if (this.maze[r][c] === 3) { // Power-up pellets
+                  const powerPellet = createPellet(c, r, true);
+                  this.powerPellets.push(powerPellet);
+                  scene.add(powerPellet);
+              }
+          }
         }
       }
 
-      setGhostStates(state){
-        this.currentStateTime = 0;
-        this.ghostState = state;
-        for (const ghost of this.ghosts){
-          ghost.state = state;
-        }
-        const modeElement = document.getElementById("mode-display");
-        modeElement.textContent = `Mode: ${state}`;
-      }
+      switchGhostStates() {
+    this.currentStateTime++;
+    const modeDurations = [7, 20, 6]; // Durations for scatter, chase, frightened states
+    if (this.currentStateTime >= modeDurations[this.ghostState]) {
+        this.ghostState = (this.ghostState + 1) % modeDurations.length; // Cycle through states
+        this.setGhostStates(this.ghostState);
+    }
+}
+
+
+setGhostStates(state) {
+  this.currentStateTime = 0;
+  this.ghostState = state;
+  for (const ghost of this.ghosts) {
+      ghost.state = state;
+
+      // Recalculate next position and direction immediately
+      const [nextPos, nextDir] = ghost.nextPosition(this.maze);
+      ghost.nextPos.x = nextPos[0];
+      ghost.nextPos.y = nextPos[1];
+      ghost.nextDir.x = nextDir[0];
+      ghost.nextDir.y = nextDir[1];
+  }
+}
+
+
 
       updateScore(amount){
         this.score += amount 
@@ -461,59 +548,6 @@ const createPellet = (x, z, isPowerUp = false) => {
   return pellet;
 };
 
-// Animate the scene
-const animate = () => {
-    requestAnimationFrame(animate);
-
-    if (G.isOver) {
-      return;
-    }
-
-    const movementSpeed = 0.03;
-    const rotationSpeed = 0.03;
-
-    // Handle player movement based on key state
-    if (keys.w || keys.ArrowUp) G.movePlayer(movementSpeed);
-    if (keys.s || keys.ArrowDown) G.movePlayer(-movementSpeed);
-    if (keys.a || keys.ArrowLeft) G.rotatePlayer(rotationSpeed);
-    if (keys.d || keys.ArrowRight) G.rotatePlayer(-rotationSpeed);
-
-    // Move the ghosts
-    G.moveGhosts(movementSpeed);
-
-    // Update the ghost targets
-    G.updateGhostTargets();
-
-    // Check for ghost collision
-    G.checkGhostCollision();
-
-    // Check for pellet consumption
-    G.checkPelletConsumption();
-
-    // Update positions based on the game state
-    player.position.set(G.player.position.y, 0, G.player.position.x);
-    
-    G.ghosts.forEach((g, i) => {
-        ghosts[i].position.set(g.position.y, 0, g.position.x);
-    });
-
-    // Rotate pellets for a dynamic effect
-    G.pellets.forEach(pellet => pellet.rotation.y += 0.03);
-    G.powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
-
-    // Position the camera
-    if (isFirstPersonView) {
-        const angle = Math.PI + G.player.orientation;
-        camera.position.set(G.player.position.y + 2 * Math.sin(angle), 1, G.player.position.x + 2 * Math.cos(angle));
-        camera.lookAt(G.player.position.y, 0, G.player.position.x);
-    } else {
-        camera.position.set(19 / 2 - 1 / 2, 15, 20);
-        camera.lookAt(19 / 2 - 1 / 2, -10, 0);
-    }
-
-    renderer.render(scene, camera);
-};
-
 // Track which keys are currently pressed
 const keys = {
   ArrowUp: false,
@@ -565,21 +599,63 @@ for (let r = 0; r < maze.length; r++) {
     }
 }
 
+const startAnimation = () => {
+  const clock = new THREE.Clock();
 
-// Generate pellets and add them to the scene
-for (let r = 0; r < maze.length; r++) {
-  for (let c = 0; c < maze[r].length; c++) {
-      if (maze[r][c] === 2) { // Regular pellets
-          const pellet = createPellet(c, r, false);
-          G.pellets.push(pellet);
-          scene.add(pellet);
-      } else if (G.maze[r][c] === 3) { // Power-up pellets
-          const powerPellet = createPellet(c, r, true);
-          G.powerPellets.push(powerPellet);
-          scene.add(powerPellet);
-      }
-  }
+  // Animate the scene
+  const animate = () => {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+
+    if (G.isOver) {
+      return;
+    }
+    const speed = dt * 2.5;
+
+    // Handle player movement based on key state
+    if (keys.w || keys.ArrowUp) G.movePlayer(speed);
+    if (keys.s || keys.ArrowDown) G.movePlayer(-speed);
+    if (keys.a || keys.ArrowLeft) G.rotatePlayer(speed);
+    if (keys.d || keys.ArrowRight) G.rotatePlayer(-speed);
+
+    // Move the ghosts
+    G.moveGhosts(speed);
+
+    // Update the ghost targets
+    G.updateGhostTargets();
+
+    // Check for ghost collision
+    G.checkGhostCollision();
+
+    // Check for pellet consumption
+    G.checkPelletConsumption();
+
+    // Update positions based on the game state
+    player.position.set(G.player.position.y, 0, G.player.position.x);
+    
+    G.ghosts.forEach((g, i) => {
+        ghosts[i].position.set(g.position.y, 0, g.position.x);
+    });
+
+    // Rotate pellets for a dynamic effect
+    G.pellets.forEach(pellet => pellet.rotation.y += 0.03);
+    G.powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
+
+    // Position the camera
+    if (isFirstPersonView) {
+        const angle = Math.PI + G.player.orientation;
+        camera.position.set(G.player.position.y + 2 * Math.sin(angle), 1, G.player.position.x + 2 * Math.cos(angle));
+        camera.lookAt(G.player.position.y, 0, G.player.position.x);
+        camera.fov = G.ghostState == 2 ? 90 : 75; // New field of view in degrees
+        camera.updateProjectionMatrix();
+    } else {
+        camera.position.set(19 / 2 - 1 / 2, 15, 20);
+        camera.lookAt(19 / 2 - 1 / 2, -10, 0);
+    }
+
+    renderer.render(scene, camera);
+  };
+  animate();
 }
 
-
-animate();
+startAnimation();
