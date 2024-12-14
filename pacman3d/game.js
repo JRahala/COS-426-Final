@@ -387,8 +387,6 @@ class Game{
         for (const ghost of this.ghosts){
           ghost.state = state;
         }
-        const modeElement = document.getElementById("mode-display");
-        modeElement.textContent = `Mode: ${state}`;
       }
 
 
@@ -479,60 +477,6 @@ const createPellet = (x, z, isPowerUp = false) => {
   return pellet;
 };
 
-// Animate the scene
-const animate = () => {
-    requestAnimationFrame(animate);
-
-    if (G.isOver) {
-      return;
-    }
-    const pacmanSpeed = G.ghostState == 2 ? 0.033 : 0.027;
-    const ghostSpeed = G.ghostState == 2 ? 0.03 : 0.025;
-
-    // Handle player movement based on key state
-    if (keys.w || keys.ArrowUp) G.movePlayer(pacmanSpeed);
-    if (keys.s || keys.ArrowDown) G.movePlayer(-pacmanSpeed);
-    if (keys.a || keys.ArrowLeft) G.rotatePlayer(pacmanSpeed);
-    if (keys.d || keys.ArrowRight) G.rotatePlayer(-pacmanSpeed);
-
-    // Move the ghosts
-    G.moveGhosts(ghostSpeed);
-
-    // Update the ghost targets
-    G.updateGhostTargets();
-
-    // Check for ghost collision
-    G.checkGhostCollision();
-
-    // Check for pellet consumption
-    G.checkPelletConsumption();
-
-    // Update positions based on the game state
-    player.position.set(G.player.position.y, 0, G.player.position.x);
-    
-    G.ghosts.forEach((g, i) => {
-        ghosts[i].position.set(g.position.y, 0, g.position.x);
-    });
-
-    // Rotate pellets for a dynamic effect
-    G.pellets.forEach(pellet => pellet.rotation.y += 0.03);
-    G.powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
-
-    // Position the camera
-    if (isFirstPersonView) {
-        const angle = Math.PI + G.player.orientation;
-        camera.position.set(G.player.position.y + 2 * Math.sin(angle), 1, G.player.position.x + 2 * Math.cos(angle));
-        camera.lookAt(G.player.position.y, 0, G.player.position.x);
-        camera.fov = G.ghostState == 2 ? 90 : 75; // New field of view in degrees
-        camera.updateProjectionMatrix();
-    } else {
-        camera.position.set(19 / 2 - 1 / 2, 15, 20);
-        camera.lookAt(19 / 2 - 1 / 2, -10, 0);
-    }
-
-    renderer.render(scene, camera);
-};
-
 // Track which keys are currently pressed
 const keys = {
   ArrowUp: false,
@@ -584,5 +528,64 @@ for (let r = 0; r < maze.length; r++) {
     }
 }
 
+const startAnimation = () => {
+  const clock = new THREE.Clock();
 
-animate();
+  // Animate the scene
+  const animate = () => {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+
+    if (G.isOver) {
+      return;
+    }
+    const pacmanSpeed = dt * 3;
+    const ghostSpeed = dt * 2.8;
+
+    // Handle player movement based on key state
+    if (keys.w || keys.ArrowUp) G.movePlayer(pacmanSpeed);
+    if (keys.s || keys.ArrowDown) G.movePlayer(-pacmanSpeed);
+    if (keys.a || keys.ArrowLeft) G.rotatePlayer(pacmanSpeed);
+    if (keys.d || keys.ArrowRight) G.rotatePlayer(-pacmanSpeed);
+
+    // Move the ghosts
+    G.moveGhosts(ghostSpeed);
+
+    // Update the ghost targets
+    G.updateGhostTargets();
+
+    // Check for ghost collision
+    G.checkGhostCollision();
+
+    // Check for pellet consumption
+    G.checkPelletConsumption();
+
+    // Update positions based on the game state
+    player.position.set(G.player.position.y, 0, G.player.position.x);
+    
+    G.ghosts.forEach((g, i) => {
+        ghosts[i].position.set(g.position.y, 0, g.position.x);
+    });
+
+    // Rotate pellets for a dynamic effect
+    G.pellets.forEach(pellet => pellet.rotation.y += 0.03);
+    G.powerPellets.forEach(powerPellet => powerPellet.rotation.y += 0.03);
+
+    // Position the camera
+    if (isFirstPersonView) {
+        const angle = Math.PI + G.player.orientation;
+        camera.position.set(G.player.position.y + 2 * Math.sin(angle), 1, G.player.position.x + 2 * Math.cos(angle));
+        camera.lookAt(G.player.position.y, 0, G.player.position.x);
+        camera.fov = G.ghostState == 2 ? 90 : 75; // New field of view in degrees
+        camera.updateProjectionMatrix();
+    } else {
+        camera.position.set(19 / 2 - 1 / 2, 15, 20);
+        camera.lookAt(19 / 2 - 1 / 2, -10, 0);
+    }
+
+    renderer.render(scene, camera);
+  };
+  animate();
+}
+
+startAnimation();
