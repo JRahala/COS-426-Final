@@ -32,6 +32,15 @@ export class Game{
         this.modeTimer = 0; // General timer for tracking state transitions
         this.currentMode = 1;
         this.isGameOver = false;
+        this.score = 0;
+    }
+
+    updateScore(points) {
+        this.score += points;
+        const scoreDisplay = document.getElementById("score");
+        if(scoreDisplay) {
+            scoreDisplay.innerText = this.score;
+        }
     }
 
     defeatGhost(ghost) {
@@ -39,7 +48,8 @@ export class Game{
         // Temporarily remove the ghost
         ghost.mesh.visible = false;
         ghost.state = 3; // Custom state for "defeated"
-    
+        this.updateScore(500);
+
         // Reset the ghost after 5 seconds
         setTimeout(() => {
             ghost.mesh.visible = true;
@@ -132,8 +142,12 @@ export class Game{
         console.log("Game Over!");
         this.isGameOver = true; // Set the game-over flag
         const gameOverDiv = document.getElementById("game-over");
+        const finalScoreDisplay = document.getElementById("final-score");
         if (gameOverDiv) {
             gameOverDiv.style.display = "block"; // Show the Game Over message
+        }
+        if(finalScoreDisplay) {
+            finalScoreDisplay.innerText = this.score;
         }
     }
     

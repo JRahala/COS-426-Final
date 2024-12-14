@@ -209,6 +209,7 @@ const animate = () => {
             Math.abs(game.player.mesh.position.z - pellet.position.z) < 0.5) {
             scene.remove(pellet);
             pellets.splice(i, 1);
+            game.updateScore(10);
         }
     }
 
@@ -218,7 +219,8 @@ const animate = () => {
             Math.abs(game.player.mesh.position.z - powerPellet.position.z) < 0.5) {
             scene.remove(powerPellet);
             powerPellets.splice(i, 1);
-    
+            game.updateScore(50);
+            
             // Activate frightened mode for all ghosts
             console.log("Power pellet collected! Ghosts frightened.");
             game.ghosts.forEach((ghost) => (ghost.state = 2));
