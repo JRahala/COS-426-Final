@@ -192,7 +192,8 @@ const animate = () => {
         const angle = Math.PI + game.player.orientation;
         camera.position.set(game.player.position.y + 2 * Math.sin(angle), 1, game.player.position.x + 2 * Math.cos(angle));
         camera.lookAt(game.player.position.y, 0, game.player.position.x);
-        camera.fov = game.ghosts[0].state == 2 ? 90 : 75; // New field of view in degrees
+        const frightenedGhost = game.ghosts.find((ghost) => ghost.state === 2);
+        camera.fov = frightenedGhost ? 90 : 75; // New field of view in degrees
         camera.updateProjectionMatrix();
     } else {
         // Default top-down view
