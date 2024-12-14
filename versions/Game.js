@@ -58,8 +58,8 @@ export class Game{
     
         for (const ghost of this.ghosts) {
             const distance = Math.sqrt(
-                (ghost.r_ - this.player.r_) ** 2 +
-                (ghost.c_ - this.player.c_) ** 2
+                (ghost.r_ - this.player.r) ** 2 +
+                (ghost.c_ - this.player.c) ** 2
             );
     
             if (distance < collisionRadius) {
@@ -74,7 +74,59 @@ export class Game{
             }
         }
     }
-    
+
+    movePlayer(speed){
+        // TODO: update when doing power pellets / frightened mode / etc
+
+        let dx = speed * Math.cos(this.player.orientation);
+        let dy = speed * Math.sin(this.player.orientation);
+
+        let nx = this.player.position.x + dx;
+        let ny = this.player.position.y + dy;
+
+        let nr = Math.round(nx);
+        let nc = Math.round(ny);
+
+        if (this.maze[nr][nc] == 1) {
+            if (this.maze[nr][this.player.c] != 1) {
+                // can move row but not column
+                dy = 0; 
+                ny = this.player.position.y;
+                nc = this.player.c;
+            }
+            else if (this.maze[this.player.r][nc] != 1) {
+                // can move column but not row
+                dx = 0; 
+                nx = this.player.position.x;
+                nr = this.player.r;
+            }
+            else {
+                // cannot move either
+                return 
+            }
+        }
+
+        this.player.position.x = nx;
+        this.player.position.y = ny;
+
+        console.log(nr);
+        console.log(nc);
+
+        this.player.r = nr; 
+        this.player.c = nc;
+        
+        if (this.maze[nr][nc] == 2){
+            this.maze[nr][nc] = 0;
+            this.player.pellets++;
+        }
+
+        this.player.dr = Math.round(dx);
+        this.player.dc = Math.round(dy);
+    }
+
+    rotatePlayer(angle){
+        this.player.orientation += angle;
+    }
     
     endGame() {
         console.log("Game Over!");
@@ -84,9 +136,6 @@ export class Game{
             gameOverDiv.style.display = "block"; // Show the Game Over message
         }
     }
-    
-    
-    
     
 
 

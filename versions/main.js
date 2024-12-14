@@ -115,6 +115,36 @@ composer.addPass(renderPass);
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1, 0.01, 0.1);
 composer.addPass(bloomPass);
 
+// Track which keys are currently pressed
+const keys = {
+  ArrowUp: false,
+  ArrowDown: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+  w: false,
+  s: false,
+  a: false,
+  d: false,
+};
+
+// Controls
+window.addEventListener('keydown', (event) => {
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = true;
+    }
+
+    if (event.key === 'v') { // Press 'V' to toggle view mode
+      console.log(`View mode: ${isFirstPersonView ? 'First-Person' : 'Overhead'}`);
+      isFirstPersonView = !isFirstPersonView;
+    }
+});
+
+window.addEventListener('keyup', (event) => {
+    if (keys.hasOwnProperty(event.key)) {
+        keys[event.key] = false;
+    }
+});
+
 // Animate the scene
 const animate = () => {
     if (game.isGameOver) {
@@ -128,8 +158,16 @@ const animate = () => {
     game.checkCollision();
 
     // Update player position
-    game.player.updatePosition(dt);
-    game.player.mesh.position.set(game.player.c_, 0.5, game.player.r_);
+    const speed = dt * 2.5;
+
+    // Handle player movement based on key state
+    if (keys.w || keys.ArrowUp) game.movePlayer(speed);
+    if (keys.s || keys.ArrowDown) game.movePlayer(-speed);
+    if (keys.a || keys.ArrowLeft) game.rotatePlayer(speed);
+    if (keys.d || keys.ArrowRight) game.rotatePlayer(-speed);
+
+    // Update positions based on the game state
+    game.player.mesh.position.set(game.player.position.y, 0, game.player.position.x);
 
     // Update ghost positions and behaviors
     game.updateGhostModes(dt);
@@ -144,17 +182,16 @@ const animate = () => {
             ghost.walking = true;
         }
         ghost.walk(dt);
-        ghost.mesh.position.set(ghost.c_, 0.5, ghost.r_);
+        ghost.mesh.position.set(ghost.c_, 0, ghost.r_);
     });
 
     // Camera positioning
     if (firstPersonView) {
-        camera.position.set(
-            game.player.mesh.position.x - Math.cos(game.player.dir) * 1,
-            1, // Slightly above Pac-Man
-            game.player.mesh.position.z - Math.sin(game.player.dir) * 1
-        );
-        camera.lookAt(game.player.mesh.position);
+        const angle = Math.PI + game.player.orientation;
+        camera.position.set(game.player.position.y + 2 * Math.sin(angle), 1, game.player.position.x + 2 * Math.cos(angle));
+        camera.lookAt(game.player.position.y, 0, game.player.position.x);
+        camera.fov = game.ghostState == 2 ? 90 : 75; // New field of view in degrees
+        camera.updateProjectionMatrix();
     } else {
         // Default top-down view
         camera.position.set(19 / 2 - 0.5, 25, 20);

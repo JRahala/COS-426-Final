@@ -9,10 +9,6 @@ export class Ghost {
         this.r = r;
         this.c = c;
 
-        // World coordinates
-        this.r_ = r;
-        this.c_ = c;
-
         // The static square they want to move to
         this.str = str;
         this.stc = stc;

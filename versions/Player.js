@@ -19,11 +19,14 @@ export class Player {
         // The direction player is pointed in (in radians)
         this.dir = dir;
 
+        // Set position and orientation
+        this.position = new THREE.Vector2(r, c);
+        this.orientation = 0;
+
         // Mouth animation properties
         this.mouthAngle = 0; // Current mouth angle
         this.mouthSpeed = 2; // Speed of mouth opening/closing
         this.mouthDirection = 1; // Direction of mouth animation (1 = opening, -1 = closing)
-
         
         // Target positions for smooth interpolation
         this.target_r_ = r;
